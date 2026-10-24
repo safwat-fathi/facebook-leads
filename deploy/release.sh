@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Releases one commit on the VPS. It is the SSH forced command of the CI deploy key (authorized_keys):
-#   restrict,command="/opt/leads/deploy/release.sh" ssh-ed25519 AAAA... leads-deploy
+#   restrict,command="/home/safwat/facebook-leads/deploy/release.sh" ssh-ed25519 AAAA... leads-deploy
 # so the key can do nothing else. CI runs `ssh safwat@host <40-hex sha>`; by hand: `deploy/release.sh <sha>`.
 # Same steps as DEPLOY.md "Updating". .env and data/ are never touched.
 set -Eeuo pipefail

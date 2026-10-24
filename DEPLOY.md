@@ -9,7 +9,7 @@ Direct host deployment, no Docker: the Next.js app runs under **pm2** (the same 
 
 ## First deploy
 ```sh
-git clone https://github.com/safwat-fathi/facebook-leads.git /opt/leads && cd /opt/leads
+git clone https://github.com/safwat-fathi/facebook-leads.git /home/safwat/facebook-leads && cd /home/safwat/facebook-leads
 pnpm install --frozen-lockfile
 cp .env.example .env
 
@@ -47,18 +47,18 @@ The database may have `-wal`/`-shm` side files, so do not copy the bare `.db`. M
 ```sh
 # on your laptop, from the project root:
 DATA_DIR=./data node scripts/backup.mjs ./export          # writes ./export/leads-YYYY-MM-DD.db
-ssh safwat@server mkdir -p /opt/leads/data
-scp ./export/leads-*.db safwat@server:/opt/leads/data/leads.db
+ssh safwat@server mkdir -p /home/safwat/facebook-leads/data
+scp ./export/leads-*.db safwat@server:/home/safwat/facebook-leads/data/leads.db
 ```
 Run it before the first `pm2 start`, as the same user that runs pm2, so the file is writable by the app.
 
 ## Backups
 ```sh
-node scripts/backup.mjs /opt/leads/backups     # run from /opt/leads; keeps the 14 newest, safe while the app is running
+node scripts/backup.mjs /home/safwat/facebook-leads/backups     # run from /home/safwat/facebook-leads; keeps the 14 newest, safe while the app is running
 ```
 Nightly cron job:
 ```
-0 3 * * * cd /opt/leads && /usr/bin/node scripts/backup.mjs /opt/leads/backups
+0 3 * * * cd /home/safwat/facebook-leads && /usr/bin/node scripts/backup.mjs /home/safwat/facebook-leads/backups
 ```
 The database holds sole traders' phone numbers and emails: keep the backups private and the VPS disk encrypted if you can.
 
@@ -71,8 +71,8 @@ git pull && pnpm install --frozen-lockfile && pnpm build && pm2 restart leads --
 Every push to `main` runs typecheck + tests, then `deploy` SSHes to the VPS and runs `deploy/release.sh <sha>` (git fast-forward, `pnpm install --frozen-lockfile`, `pnpm build`, `pm2 startOrRestart`, then it waits for `/login` to answer). The deploy key can run that script and nothing else. `.env` and the data directory are never touched. One-time setup:
 
 1. Laptop: `ssh-keygen -t ed25519 -N '' -C leads-deploy -f ~/leads-deploy`
-2. VPS: finish "First deploy" above (clone to `/opt/leads`, `.env`, `pm2 start` done once; no sudo needed for later releases). Check that `ssh <host> 'command -v node pnpm pm2'` works from your laptop (same minimal PATH as CI; extend the `PATH` line in `release.sh` if not). Then append to `~/.ssh/authorized_keys`:
-   `restrict,command="/opt/leads/deploy/release.sh" <contents of leads-deploy.pub>`
+2. VPS: finish "First deploy" above (clone to `/home/safwat/facebook-leads`, `.env`, `pm2 start` done once; no sudo needed for later releases). Check that `ssh <host> 'command -v node pnpm pm2'` works from your laptop (same minimal PATH as CI; extend the `PATH` line in `release.sh` if not). Then append to `~/.ssh/authorized_keys`:
+   `restrict,command="/home/safwat/facebook-leads/deploy/release.sh" <contents of leads-deploy.pub>`
 3. Laptop, from the project root:
    ```sh
    gh secret set DEPLOY_SSH_KEY < ~/leads-deploy && rm ~/leads-deploy ~/leads-deploy.pub
