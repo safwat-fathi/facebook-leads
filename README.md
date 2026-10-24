@@ -9,11 +9,11 @@ A private web app for finding Egyptian Facebook pages that sell online, checking
 - **Fit**: two scores per page (web shop, WhatsApp automation) with the reasons behind every point, a pitch label, and a Fit filter and sort.
 - **Budgets**: every search shows a cost estimate first and has a hard budget; there is a per-job and a daily limit.
 
-What is built and what comes next: see [../ROADMAP.md](../ROADMAP.md). Deploying: see [DEPLOY.md](DEPLOY.md). This file covers using and developing the app.
+What is built and what comes next: see [ROADMAP.md](ROADMAP.md). Deploying (pm2 + nginx, no Docker): see [DEPLOY.md](DEPLOY.md). This file covers using and developing the app.
 
 ## Quick start (local)
 
-Requires Node 22.19+ and pnpm.
+Requires Node 22.19+ and pnpm (this project does not use Docker).
 
 ```sh
 pnpm install

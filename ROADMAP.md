@@ -23,13 +23,14 @@ Data today: 30 pages, 9 enriched, 9 scored with a pitch.
 ## Next, in order
 
 1. **Spot-check the scores.** Look at the top and bottom pages in the Fit sort on Facebook and note which look wrong; I adjust the weights in `src/lib/score.ts`. This is not labeling, only a quick look.
-2. **Deploy** to the VPS following `DEPLOY.md`. The Docker, Caddy and firewall steps have never been run.
+2. **Deploy** to the VPS following `DEPLOY.md`. The native Node/pm2, nginx and firewall steps have never been run.
 3. **Paid smoke tests in the app** (about $0.30): find 5 new pages, and run the website agent on 2 pages. Neither has run with real money inside the web app yet.
 4. **Wider discovery**: several categories and cities (the first sample was one city, mostly household goods), then check websites and enrich the new pages.
 5. **Store-platform detection** in the website check (Shopify, Salla, Zid, WooCommerce), so a brochure site and a real shop stop looking the same.
 6. **Optional AI check** ("does this page sell physical goods to consumers?", about $0.002 a page). Only if non-sellers keep ranking high. One of the nine pages so far was a job-listings page.
 
 ## Rules we keep
+- No Docker. Runs directly on the host using Node.js, pnpm, pm2, and native nginx.
 - pnpm only. Secrets go in `.env`, never in `.env.example`.
 - Every paid run has a budget. Each job has a cap and there is a daily cap. Check Apify's own run records after any paid run.
 - "Has a website" is decided from evidence. A Cloudflare 403 means the site exists.

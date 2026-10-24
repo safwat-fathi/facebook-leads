@@ -52,5 +52,5 @@ export function sameOrigin(req: Request, appOrigin = getEnv().APP_ORIGIN): boole
 }
 
 export const loginLimiter = new LoginLimiter();
-// Behind Caddy the client address arrives in X-Forwarded-For (Caddy overwrites any client-supplied value; the app port is never published).
+// Behind nginx the client address arrives in X-Forwarded-For (deploy/leads.conf overwrites any client-supplied value; the app port is bound to 127.0.0.1 only).
 export const clientIp = (req: Request) => (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';

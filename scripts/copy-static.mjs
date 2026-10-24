@@ -1,4 +1,4 @@
-// `output: 'standalone'` leaves out .next/static and public/: copy them next to server.js so `pnpm start` (and the Docker image) can serve them.
+// `output: 'standalone'` leaves out .next/static and public/: copy them next to server.js so `pnpm start` (and the standalone server) can serve them.
 import { cpSync, existsSync } from 'node:fs';
 
 if (existsSync('.next/standalone')) {
