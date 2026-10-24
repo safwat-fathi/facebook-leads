@@ -1,0 +1,92 @@
+[
+ {
+  "inputUrl": "https://www.facebook.com/Dollar.For.Import.eg/",
+  "isResultComplete": true,
+  "results": [],
+  "totalCount": 0
+ },
+ {
+  "inputUrl": "https://www.facebook.com/homestore010/",
+  "isResultComplete": true,
+  "results": [],
+  "totalCount": 1
+ },
+ {
+  "inputUrl": "https://www.facebook.com/61564645123080/",
+  "pageID": "440071172503418",
+  "pageName": "Amen Home-آمن هوم للادوات المنزليه",
+  "isActive": true,
+  "startDateFormatted": "2026-09-01T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "MESSAGE_PAGE",
+   "ctaText": "Send message",
+   "cards": []
+  }
+ },
+ {
+  "inputUrl": "https://www.facebook.com/61564645123080/",
+  "pageID": "440071172503418",
+  "pageName": "Amen Home-آمن هوم للادوات المنزليه",
+  "isActive": true,
+  "startDateFormatted": "2026-09-23T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "MESSAGE_PAGE",
+   "ctaText": "Send message",
+   "cards": []
+  }
+ },
+ {
+  "inputUrl": "https://www.facebook.com/61564645123080/",
+  "pageID": "440071172503418",
+  "pageName": "Amen Home-آمن هوم للادوات المنزليه",
+  "isActive": true,
+  "startDateFormatted": "2026-09-09T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "MESSAGE_PAGE",
+   "ctaText": "Send message",
+   "cards": []
+  }
+ },
+ {
+  "inputUrl": "https://www.facebook.com/p/Hawaaeg-%D8%AD%D9%88%D8%A7%D8%A6%D8%AC-61566508693971/",
+  "pageID": "394007220471607",
+  "pageName": "Hawaaeg - حوائج",
+  "isActive": true,
+  "startDateFormatted": "2026-07-29T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "SHOP_NOW",
+   "ctaText": "Shop now",
+   "cards": []
+  }
+ },
+ {
+  "inputUrl": "https://www.facebook.com/p/Hawaaeg-%D8%AD%D9%88%D8%A7%D8%A6%D8%AC-61566508693971/",
+  "pageID": "394007220471607",
+  "pageName": "Hawaaeg - حوائج",
+  "isActive": true,
+  "startDateFormatted": "2026-07-29T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "SHOP_NOW",
+   "ctaText": "Shop now",
+   "cards": []
+  }
+ },
+ {
+  "inputUrl": "https://www.facebook.com/p/Hawaaeg-%D8%AD%D9%88%D8%A7%D8%A6%D8%AC-61566508693971/",
+  "pageID": "394007220471607",
+  "pageName": "Hawaaeg - حوائج",
+  "isActive": true,
+  "startDateFormatted": "2026-08-11T07:00:00.000Z",
+  "endDateFormatted": "2026-10-24T07:00:00.000Z",
+  "snapshot": {
+   "ctaType": "SHOP_NOW",
+   "ctaText": "Shop now",
+   "cards": []
+  }
+ }
+]

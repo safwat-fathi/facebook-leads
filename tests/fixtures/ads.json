@@ -1,0 +1,52 @@
+[
+ {
+  "pageID": "394007220471607",
+  "isActive": true,
+  "publisherPlatform": [
+   "FACEBOOK",
+   "INSTAGRAM",
+   "AUDIENCE_NETWORK",
+   "MESSENGER",
+   "THREADS"
+  ],
+  "startDateFormatted": "2026-07-29T07:00:00.000Z",
+  "snapshot": {
+   "ctaText": "Shop now",
+   "ctaType": "SHOP_NOW",
+   "cards": []
+  }
+ },
+ {
+  "pageID": "394007220471607",
+  "isActive": true,
+  "publisherPlatform": [
+   "FACEBOOK",
+   "INSTAGRAM",
+   "AUDIENCE_NETWORK",
+   "MESSENGER",
+   "THREADS"
+  ],
+  "startDateFormatted": "2026-07-29T07:00:00.000Z",
+  "snapshot": {
+   "ctaText": "Shop now",
+   "ctaType": "SHOP_NOW",
+   "cards": []
+  }
+ },
+ {
+  "pageID": "394007220471607",
+  "isActive": true,
+  "publisherPlatform": [
+   "FACEBOOK",
+   "INSTAGRAM",
+   "MESSENGER",
+   "WHATSAPP"
+  ],
+  "startDateFormatted": "2026-08-11T07:00:00.000Z",
+  "snapshot": {
+   "ctaText": "Shop now",
+   "ctaType": "SHOP_NOW",
+   "cards": []
+  }
+ }
+]

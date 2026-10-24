@@ -1,0 +1,9 @@
+{$APP_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	# Caddy replaces any client-supplied X-Forwarded-For with the real client address; the app relies on that for login throttling.
+	reverse_proxy app:3000
+}
