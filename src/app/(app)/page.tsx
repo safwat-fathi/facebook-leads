@@ -6,7 +6,7 @@ import { VerdictButtons } from '@/components/VerdictButtons';
 import { requireAuth } from '@/lib/auth';
 import { filtersToQuery, parseFilters, type Filters } from '@/lib/filters';
 import { facets, pageDetail, queryPages, SORT_KEYS, stats } from '@/lib/pages';
-import { PITCH_LABEL, pitchTone, signalTags, STAGE_LABEL, webInfo } from '@/lib/present';
+import { PITCH_LABEL, pitchTone, safeUrl, signalTags, STAGE_LABEL, webInfo } from '@/lib/present';
 
 type SP = Record<string, string | string[] | undefined>;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -83,7 +83,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                         ? <><span className="ltr">{r.whatsapp}</span><span className={`sub${r.whatsapp_source === 'page' ? '' : ' guess'}`}>{r.whatsapp_source === 'page' ? 'linked on the page' : 'mobile guess'}</span></>
                         : <span className="tag">none</span>}
                     </td>
-                    <td><span className={`state ${web.group}`}>{web.text}</span>{r.website_domain && <span className="sub" dir="ltr">{r.website_domain}</span>}</td>
+                    <td><span className={`state ${web.group}`}>{web.text}</span>{r.website_domain && <span className="sub" dir="ltr">{(() => { const safe = r.website_url ? safeUrl(r.website_url) : null; return safe ? <a href={safe} target="_blank" rel="noopener noreferrer">{r.website_domain}</a> : r.website_domain; })()}</span>}</td>
                     <td>{STAGE_LABEL[r.stage] ?? r.stage}</td>
                     <td>{(() => { const tags = signalTags(r); return tags === null ? <span className="tag">not enriched</span> : tags.length ? tags.map((t) => <span key={t.text} className={`pill ${t.tone}`}>{t.text}</span>) : <span className="tag">nothing notable</span>; })()}</td>
                     <td><VerdictButtons id={r.fb_page_id} verdict={r.verdict} title={r.title ?? ''} /></td>
