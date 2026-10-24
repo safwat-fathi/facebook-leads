@@ -9,6 +9,7 @@ export const AGENT_PAGE_USD = 0.025; // measured $0.023 per page in the Phase 0b
 const words = (max: number, n: number) => z.array(z.string().trim().min(1).max(80)).min(1).max(max).transform((a) => [...new Map(a.map((s) => [s.toLowerCase(), s])).values()]).pipe(z.array(z.string()).max(n));
 export const DiscoverParams = z.object({
   terms: words(8, 8), locations: words(3, 3), perSearch: z.coerce.number().int().min(5).max(40),
+  minFollowers: z.coerce.number().int().min(0).max(1e9).optional(), maxFollowers: z.coerce.number().int().min(0).max(1e9).optional(),
 }).strict();
 export const CheckParams = z.object({
   filters: FilterSchema, limit: z.coerce.number().int().min(1).max(50), recheck: z.boolean().default(false),

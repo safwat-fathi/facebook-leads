@@ -127,7 +127,7 @@ async function runDiscover(jobId: number, p: DiscoverParams, d: JobDeps, ctx: Ct
   if (!d.apify) throw new Error('Apify is not configured');
   const pairs = p.terms.flatMap((t) => p.locations.map((l) => [t, l] as const));
   const worst = searchCost(p.perSearch);
-  let created = 0, updated = 0, skipped = 0, failures = 0;
+  let created = 0, updated = 0, skipped = 0, outOfRange = 0, failures = 0;
   for (const [i, [term, loc]] of pairs.entries()) {
     if (ctx.signal.aborted) break;
     if (ctx.remaining() < worst) { ctx.log(`Stopped before search ${i + 1}/${pairs.length}: ${usd(ctx.remaining())} left, the next search could cost up to ${usd(worst)}.`); break; }
@@ -139,6 +139,7 @@ async function runDiscover(jobId: number, p: DiscoverParams, d: JobDeps, ctx: Ct
       for (const item of run.items) {
         const row = recordToRow(item, `job:${jobId}`);
         if (!row) { skipped++; continue; }
+        if (row.followers < (p.minFollowers ?? 0) || row.followers > (p.maxFollowers ?? Infinity)) { outOfRange++; continue; } // ponytail: already paid for by Apify; this only keeps them out of the list
         if (upsertPage(row) === 'inserted') { created++; c++; } else updated++;
       }
       failures = 0;
@@ -149,7 +150,7 @@ async function runDiscover(jobId: number, p: DiscoverParams, d: JobDeps, ctx: Ct
       if (++failures >= 3) throw new Error('Three searches in a row failed; stopping.');
     }
   }
-  ctx.progress(`${created} new pages, ${updated} already known${skipped ? `, ${skipped} results without a page id skipped` : ''}`);
+  ctx.progress(`${created} new pages, ${updated} already known${skipped ? `, ${skipped} results without a page id skipped` : ''}${outOfRange ? `, ${outOfRange} outside the follower range skipped` : ''}`);
 }
 
 // Recent posts + ads for the pages in a filter, five pages per Apify run. Pages the scraper reports nothing for are still marked

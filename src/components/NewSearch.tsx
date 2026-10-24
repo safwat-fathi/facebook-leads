@@ -21,12 +21,14 @@ export function NewSearch() {
   const [terms, setTerms] = useState('');
   const [cities, setCities] = useState<string[]>(['Cairo']);
   const [perSearch, setPerSearch] = useState(20);
+  const [minF, setMinF] = useState('');
+  const [maxF, setMaxF] = useState('');
   const [budget, setBudget] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const locations = cities.map((c) => `${c}, Egypt`);
   const ready = lines(terms).length > 0 && lines(terms).length <= 8 && locations.length > 0 && locations.length <= 3 && perSearch >= 5 && perSearch <= 40;
-  const params = { terms: lines(terms), locations, perSearch };
+  const params = { terms: lines(terms), locations, perSearch, ...(minF && { minFollowers: Number(minF) }), ...(maxF && { maxFollowers: Number(maxF) }) };
   const { est, error: estError } = useEstimate(ready ? { kind: 'discover', params } : null);
 
   const addTerms = (t: string[]) => setTerms((cur) => [...new Set([...lines(cur), ...t])].join('\n'));
@@ -49,6 +51,8 @@ export function NewSearch() {
       </fieldset>
       <div className="inline">
         <label>Results per search <input type="number" min={5} max={40} value={perSearch} onChange={(e) => setPerSearch(Number(e.target.value))} /></label>
+        <label>Followers from <input type="number" min={0} value={minF} onChange={(e) => setMinF(e.target.value)} /></label>
+        <label>Followers up to <input type="number" min={0} value={maxF} onChange={(e) => setMaxF(e.target.value)} /></label>
         <label>Budget (USD) <input type="number" min={0.01} step={0.01} value={budget} placeholder={est ? String(est.suggestedBudgetUsd) : ''} onChange={(e) => setBudget(e.target.value)} /></label>
       </div>
       <p className="estimate" aria-live="polite">
