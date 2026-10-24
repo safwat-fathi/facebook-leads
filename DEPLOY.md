@@ -5,7 +5,7 @@ Direct host deployment, no Docker: the Next.js app runs under **pm2** (the same 
 ## Before you start
 - A VPS with Node.js 22.19+, pnpm, pm2, nginx and certbot (the now-focus box already has them; check with `node -v`, since `node:sqlite` needs 22.19+).
 - Ports 22/80/443 open. Port 3100 stays closed to the outside.
-- A domain whose **A record** points at the VPS (certbot needs this for the certificate).
+- DNS: `fbleads.tijaratk.com` is an **A record in Cloudflare** pointing at the VPS (75.119.144.29), proxied (orange cloud). After certbot runs, set Cloudflare SSL/TLS mode to **Full** (not Flexible, which causes a redirect loop). Cloudflare only proxies HTTP(S): SSH and `DEPLOY_HOST` must use the VPS IP, never `fbleads.tijaratk.com`. nginx needs real-client-IP handling for Cloudflare (see the comment in `deploy/leads.conf`).
 
 ## First deploy
 ```sh
@@ -15,7 +15,7 @@ cp .env.example .env
 
 # 1. create the login key (shown once; save it in a password manager)
 pnpm run gen-key
-# 2. edit .env: APP_ORIGIN (https://<domain>), the two values printed above, APIFY_TOKEN, OPENROUTER_API_KEY, limits
+# 2. edit .env: APP_ORIGIN (https://fbleads.tijaratk.com), the two values printed above, APIFY_TOKEN, OPENROUTER_API_KEY, limits
 nano .env
 
 # 3. optional, BEFORE the first start: bring your existing leads (see "Importing your existing leads" below)
@@ -25,17 +25,17 @@ pnpm build
 pm2 start ecosystem.config.cjs && pm2 save
 pm2 logs leads --lines 30 --nostream
 
-# 5. nginx vhost + certificate (edit server_name in deploy/leads.conf first)
+# 5. nginx vhost + certificate (server_name is already fbleads.tijaratk.com)
 sudo cp deploy/leads.conf /etc/nginx/sites-available/leads
 sudo ln -s /etc/nginx/sites-available/leads /etc/nginx/sites-enabled/leads
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d <domain>
+sudo certbot --nginx -d fbleads.tijaratk.com
 ```
-Open `https://<your domain>` and sign in with the key. If the repo is private, the VPS needs read access to clone it (a read-only GitHub deploy key, or a token in the remote URL).
+Open `https://fbleads.tijaratk.com` and sign in with the key. If the repo is private, the VPS needs read access to clone it (a read-only GitHub deploy key, or a token in the remote URL).
 
 ## First-deploy checklist (nothing here can be tested from a laptop)
-- [ ] `https://<domain>` loads without a certificate warning, and `http://<domain>` redirects to https.
-- [ ] `curl -sI https://<domain>/login` shows `strict-transport-security`, `content-security-policy` (with a `nonce-`) and `x-frame-options: DENY`.
+- [ ] `https://fbleads.tijaratk.com` loads without a certificate warning, and `http://fbleads.tijaratk.com` redirects to https.
+- [ ] `curl -sI https://fbleads.tijaratk.com/login` shows `strict-transport-security`, `content-security-policy` (with a `nonce-`) and `x-frame-options: DENY`.
 - [ ] A wrong key gives "Invalid API key"; the right key signs you in; **Sign out** returns you to the login page.
 - [ ] `curl -m 5 http://<vps-ip>:3100/` from another machine **fails** (the app port must not be published).
 - [ ] Jobs page shows the daily limit. Run a small check first: Leads, filter to one page, **Check websites**, tick "check again", Start. A listed site costs $0.
