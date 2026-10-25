@@ -78,7 +78,9 @@ tbody tr:hover { background: color-mix(in srgb, var(--opp) 6%, var(--surface)); 
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18); }
 .drawer-head { display: flex; gap: 12px; align-items: start; justify-content: space-between; padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
 .drawer-head h2 { margin: 0; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
-.drawer-body { overflow-y: auto; padding: 8px 20px 28px; }
+html { scrollbar-gutter: stable; } /* the page does not shift sideways when the scrollbar is hidden */
+html:has(dialog.drawer[open]) { overflow: hidden; } /* the list behind an open drawer does not scroll */
+.drawer-body { overflow-y: auto; overscroll-behavior: contain; padding: 8px 20px 28px; }
 .drawer-body h3 { font-size: 14px; margin: 22px 0 8px; }
 .drawer-body p { margin: 0 0 8px; max-width: 68ch; }
 dl.facts { display: grid; grid-template-columns: 9.5rem 1fr; gap: 6px 12px; margin: 0; }
