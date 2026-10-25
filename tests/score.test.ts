@@ -45,6 +45,16 @@ describe('not enough data', () => {
   });
 });
 
+describe('store platform (shop_fit)', () => {
+  it('a detected store is a reason against pitching a web shop; a site with none detected is explained, not penalised', () => {
+    const up = { website_status: 'listed_verified', inbox_posts: 3, ads_active: 2 }; // enough other points that the score is not clamped at 0
+    const plain = read(up), withStore = read({ ...up, store_platform: 'salla' });
+    expect(pts(withStore, 'shop') - pts(plain, 'shop')).toBe(W.shop.hasStore);
+    const store = s(withStore);
+    expect(store.reasons.some((r) => r.text.includes('salla'))).toBe(true);
+  });
+});
+
 describe('website (shop_fit)', () => {
   it('no website found earns the points; a site earns none but is explained; unknown is a note, not a penalty', () => {
     expect(pts(read({ website_status: 'none_found' }), 'shop') - pts(read({ website_status: 'listed_verified' }), 'shop')).toBe(W.shop.noSite);

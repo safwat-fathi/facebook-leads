@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BASIS, PITCH_LABEL, STAGE_LABEL, pitchTone, safeUrl, usd, webInfo } from '@/lib/present';
+import { BASIS, PITCH_LABEL, PLATFORM_LABEL, STAGE_LABEL, pitchTone, safeUrl, usd, webInfo } from '@/lib/present';
 import { THRESHOLD, type Reason } from '@/lib/score';
 import type { PageDetail } from '@/lib/pages';
+import type { OutreachState } from '@/lib/outreach';
 import { postJson } from './api';
+import { Outreach } from './Outreach';
 
 const nf = new Intl.NumberFormat('en');
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' }) : '');
@@ -29,7 +31,7 @@ function Reasons({ title, score, reasons }: { title: string; score: number; reas
 }
 
 // A native <dialog> opened with showModal(): focus is trapped, the page behind is inert, and Esc closes it, with no hand-written code.
-export function Drawer({ d, closeHref }: { d: PageDetail; closeHref: string }) {
+export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: string; outreach: OutreachState }) {
   const ref = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [saved, setSaved] = useState('');
@@ -83,6 +85,7 @@ export function Drawer({ d, closeHref }: { d: PageDetail; closeHref: string }) {
         <dl className="facts">
           <Fact label="Site">{d.website_url && <Link href={d.website_url} />}</Fact>
           <Fact label="Links on the page">{d.website_listed.length > 0 && d.website_listed.map((l, i) => <div key={i}><Link href={l.url} /><span className="note"> {l.cls}</span></div>)}</Fact>
+          <Fact label="Store platform">{d.store_platform ? PLATFORM_LABEL[d.store_platform] : ''}</Fact>
           <Fact label="Last checked">{when(d.website_checked_at)}</Fact>
           <Fact label="Search cost">{d.agent_cost_usd ? usd(d.agent_cost_usd) : ''}</Fact>
         </dl>
@@ -122,6 +125,7 @@ export function Drawer({ d, closeHref }: { d: PageDetail; closeHref: string }) {
         </div>
         <label htmlFor="d-notes">Notes</label>
         <textarea id="d-notes" key={d.notes ?? ''} defaultValue={d.notes ?? ''} maxLength={5000} onBlur={(e) => { if (e.target.value !== (d.notes ?? '')) save({ notes: e.target.value }); }} />
+        <Outreach key={d.fb_page_id} d={d} state={outreach} />
         <p className="saved" aria-live="polite">{saved}</p>
         {error && <p className="error" role="alert">{error}</p>}
       </div>

@@ -3,14 +3,14 @@ import 'server-only';
 import { z } from 'zod';
 import { getDb } from './db';
 import { buildWhere, STAGES, VERDICTS, type Filters } from './filters';
-import { HAS_WEBSITE, REVIEW_WEBSITE, type WebsiteStatus } from './parse';
+import { HAS_WEBSITE, REVIEW_WEBSITE, type Platform, type WebsiteStatus } from './parse';
 import { bad, HttpError } from './errors';
 import type { PageRow } from './ingest';
 import type { AdSignals, PostSignals } from './signals';
 import { fitSort, matchesPitch, scorePage, type Pitch, type Score, type ScoreInput } from './score';
 
 const FROM = 'from pages left join signals using (fb_page_id)'; // filters may use signal columns
-const SCORE_COLS = 'fb_page_id, followers, country, verdict, website_status, whatsapp_source, ad_running, enriched_at, last_post_at, posts_fetched, posts_30d, inbox_posts, cod_posts, shop_link_posts, comments_total, ads_checked, ads_active, ads_message_cta';
+const SCORE_COLS = 'fb_page_id, followers, country, verdict, website_status, store_platform, whatsapp_source, ad_running, enriched_at, last_post_at, posts_fetched, posts_30d, inbox_posts, cod_posts, shop_link_posts, comments_total, ads_checked, ads_active, ads_message_cta';
 
 // node:sqlite returns null-prototype objects, which React refuses to pass to client components: copy rows into plain objects here, once.
 const rows = <T>(sql: string, params: Record<string, string | number | null> = {}) => getDb().prepare(sql).all(params).map((r) => ({ ...r })) as unknown as T[];
@@ -45,10 +45,10 @@ export function upsertPage(row: PageRow): 'inserted' | 'updated' {
   return existed ? 'updated' : 'inserted';
 }
 
-export type WebsiteResult = { url?: string | null; domain?: string | null; status: WebsiteStatus; evidence?: unknown; cost?: number | null };
+export type WebsiteResult = { url?: string | null; domain?: string | null; platform?: Platform | null; status: WebsiteStatus; evidence?: unknown; cost?: number | null };
 export function saveWebsite(id: string, r: WebsiteResult) {
   getDb().prepare(`update pages set website_url=:url, website_domain=:domain, website_status=:status, website_evidence=:evidence,
-    website_checked_at=:at, agent_cost_usd=:cost where fb_page_id=:id`).run({ id, url: r.url ?? null, domain: r.domain ?? null, status: r.status, evidence: JSON.stringify(r.evidence ?? {}), at: new Date().toISOString(), cost: r.cost ?? null });
+    website_checked_at=:at, agent_cost_usd=:cost, store_platform=:platform where fb_page_id=:id`).run({ id, url: r.url ?? null, domain: r.domain ?? null, platform: r.platform ?? null, status: r.status, evidence: JSON.stringify(r.evidence ?? {}), at: new Date().toISOString(), cost: r.cost ?? null });
 }
 
 const Update = z.object({
@@ -71,14 +71,14 @@ export function savePage(id: string, body: unknown) {
 export type ListRow = {
   fb_page_id: string; title: string | null; url: string; followers: number; city: string | null; country: string | null; location_source: string | null;
   business_type: string | null; category: string | null; whatsapp: string | null; whatsapp_source: string | null; phone: string | null;
-  website_listed_class: string | null; website_status: WebsiteStatus | null; website_url: string | null; website_domain: string | null; stage: string; verdict: string | null;
+  website_listed_class: string | null; website_status: WebsiteStatus | null; website_url: string | null; website_domain: string | null; store_platform: Platform | null; stage: string; verdict: string | null;
   enriched_at: string | null; inbox_posts: number | null; cod_posts: number | null; shop_link_posts: number | null; posts_30d: number | null; ads_active: number | null; ads_message_cta: number | null;
   ad_running: number | null; last_post_at: string | null; posts_fetched: number | null; comments_total: number | null; ads_checked: number | null;
   shop_fit: number; wa_fit: number; pitch: Pitch | null;
 };
 const SORTS: Record<string, string> = { followers: 'followers', title: 'title collate nocase', city: 'city', website: 'website_status', stage: 'stage' };
 export const SORT_KEYS = [...Object.keys(SORTS), 'fit']; // 'fit' is sorted in memory (see queryPages)
-const LIST_COLS = 'fb_page_id, title, url, followers, city, country, location_source, business_type, category, whatsapp, whatsapp_source, phone, website_listed_class, website_status, website_url, website_domain, stage, verdict, enriched_at, inbox_posts, cod_posts, shop_link_posts, posts_30d, ads_active, ads_message_cta, ad_running, last_post_at, posts_fetched, comments_total, ads_checked';
+const LIST_COLS = 'fb_page_id, title, url, followers, city, country, location_source, business_type, category, whatsapp, whatsapp_source, phone, website_listed_class, website_status, website_url, website_domain, store_platform, stage, verdict, enriched_at, inbox_posts, cod_posts, shop_link_posts, posts_30d, ads_active, ads_message_cta, ad_running, last_post_at, posts_fetched, comments_total, ads_checked';
 export type PageOpts = { sort?: string; dir?: string; limit?: number; offset?: number };
 type RawRow = Omit<ListRow, 'shop_fit' | 'wa_fit' | 'pitch'>;
 const withFit = (r: RawRow): { row: ListRow; score: Score } => { const score = scorePage(r); return { row: { ...r, shop_fit: score.shop, wa_fit: score.wa, pitch: score.pitch }, score }; };
@@ -104,7 +104,7 @@ export type PageDetail = {
   fb_page_id: string; url: string; title: string | null; categories: string | null; category: string | null; business_type: string | null; followers: number;
   country: string | null; city: string | null; district: string | null; location_source: string | null;
   phone: string | null; email: string | null; whatsapp: string | null; whatsapp_source: string | null; ad_running: number;
-  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; website_checked_at: string | null; agent_cost_usd: number | null;
+  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; store_platform: Platform | null; website_checked_at: string | null; agent_cost_usd: number | null;
   stage: string; notes: string | null; verdict: string | null; discovered_by: string | null; first_seen: string | null; last_seen: string | null;
   wa: string[]; website_listed: { url: string; cls: string }[]; website_evidence: Record<string, unknown> | null;
   intro: string | null; address: string | null; ad_status: string | null; creation_date: string | null;

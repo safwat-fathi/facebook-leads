@@ -33,6 +33,9 @@ pnpm dev                       # http://localhost:3000, sign in with the key
 | `SESSION_SECRET` | yes | Signs the session cookie (32+ chars). Changing it signs everyone out. |
 | `APIFY_TOKEN` | for searches | Used by Find new pages and the agent's Google search. Empty disables them. |
 | `OPENROUTER_API_KEY` | for the agent | Used for the model that looks for websites. Empty disables the agent (free checks still work). |
+| `BREVO_API_KEY` | for email | Sends outreach email through Brevo. Empty disables sending. |
+| `OUTREACH_FROM_EMAIL` / `OUTREACH_FROM_NAME` | no | Sender, default `hello@tijaratk.com` / `Tijaratk`. The address must be a verified sender in Brevo. |
+| `OUTREACH_DAILY_CAP` | no | Emails allowed in any 24 hours. Default 20. |
 | `AGENT_MODEL` | no | Default `anthropic/claude-haiku-5.5`. |
 | `MAX_JOB_USD` | no | Largest budget one job may have. Default 3. |
 | `DAILY_BUDGET_USD` | no | Total across jobs in any rolling 24 h. Default 10. |
@@ -75,6 +78,13 @@ Every page gets two scores out of 100, computed on the fly from what is stored (
 - Sort by **Fit** (best score first) and filter by **Fit** (Web shop includes Both). The same filter applies to the CSV and to Enrich/Check jobs.
 - **The weights are first guesses.** They live in one object in `src/lib/score.ts` (`WEIGHTS`, `THRESHOLD`) and are pinned by `tests/score.test.ts`, so retune both together. Scoring ranks fit, not willingness to pay.
 
+### Contact (outreach)
+Open a page and use **Contact**: *Draft message* asks the model (OpenRouter, about a cent, counted in the daily budget) for a short Arabic message based on the page's fit and posts. You edit it, then **Send email** (Brevo, from `OUTREACH_FROM_EMAIL`) or **Open in WhatsApp** (a prefilled chat; you press send in WhatsApp). Nothing is sent without that click.
+- Every email gets an opt-out line. **Do not contact** adds the page's email and phone numbers to a list that blocks both channels; use it when someone replies "stop".
+- Refused: a page marked not a seller, outside Egypt or abandoned; a page on the do-not-contact list; an address already emailed; anything past `OUTREACH_DAILY_CAP`.
+- Each send is kept under *History*. A sent email moves a new lead to *Contacted* (never back from *Replied* or *Converted*).
+- Platform detection: the website check also records Shopify, Salla, Zid or WooCommerce when it can see them. A detected store lowers the web-shop score; existing pages get it the next time they are re-checked.
+
 ### Jobs
 One job runs at a time. After each Apify run the app waits (about 8 to 10 seconds, up to 30) for Apify to settle the charge, because the figure it reports right after a run ends is too low; budgets and the daily limit use the settled figure. A run that fails or is cancelled is charged too. Progress updates live; **Cancel** stops a running job and its Apify run. If the server restarts mid-job, the job is marked failed and its runs are aborted.
 
@@ -114,4 +124,4 @@ scripts/          gen-key, backup, production-build check
 - One shared key; no per-person accounts or audit trail.
 - Login throttle memory resets on restart.
 - A server restart aborts a running job's Apify runs but does not ledger what they had charged by then (a few cents at most); check the Apify console after a restart mid-job.
-- The database holds sole traders' phone numbers and emails. Keep the server and backups private. Contacting these businesses is regulated (Egypt Law 151/2020); get Egyptian legal advice before any outreach. The app does not send messages.
+- The database holds sole traders' phone numbers and emails. Keep the server and backups private. Contacting these businesses is regulated (Egypt Law 151/2020). The app can send email once `BREVO_API_KEY` is set, with an opt-out line, a do-not-contact list and a daily cap, but those do not make a send lawful: getting Egyptian legal advice on consent and permits is your responsibility.

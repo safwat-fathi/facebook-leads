@@ -56,6 +56,12 @@ describe('filters', () => {
     expect(find({ whatsapp: 'confirmed' })).toEqual(['100', '101', '103']);
     expect(find({ whatsapp: 'none' }).length).toBeGreaterThan(0);
   });
+  it('platform filter and saved platform', () => {
+    saveWebsite('100', { status: 'listed_verified', platform: 'shopify' }); saveWebsite('101', { status: 'listed_verified' }); saveWebsite('102', { status: 'none_found' });
+    expect(find({ platform: 'shopify' })).toEqual(['100']);
+    expect(find({ platform: 'none' })).toEqual(['101']);
+    expect(pageDetail('100')?.store_platform).toBe('shopify');
+  });
   it('website filters follow the saved status', () => {
     expect(find({ website: 'unknown' }).length).toBe(RECORDS.length);
     saveWebsite('100', { status: 'listed_blocked' }); saveWebsite('102', { status: 'none_found' }); saveWebsite('103', { status: 'listed_dead' });

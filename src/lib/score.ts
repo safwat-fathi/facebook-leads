@@ -5,7 +5,7 @@ import { HAS_WEBSITE, REVIEW_WEBSITE } from './parse';
 
 export const WEIGHTS = {
   // Each side's positive weights add up to 100.
-  shop: { noSite: 30, inbox: 20, active: 15, ads: 15, followers: 10, cod: 10, orderLink: -30 },
+  shop: { noSite: 30, inbox: 20, active: 15, ads: 15, followers: 10, cod: 10, orderLink: -30, hasStore: -30 },
   wa: { comments: 20, messageAds: 20, whatsapp: 20, inbox: 20, active: 10, followers: 10 },
 } as const;
 export const THRESHOLD = 50; // a side "clears" at this score
@@ -26,7 +26,7 @@ export type Score = {
   blocked: string | null; // why the page was dropped regardless of signals
 };
 export type ScoreInput = {
-  followers: number; country: string | null; verdict: string | null; website_status: string | null; whatsapp_source: string | null; ad_running: number | null;
+  followers: number; country: string | null; verdict: string | null; website_status: string | null; store_platform?: string | null; whatsapp_source: string | null; ad_running: number | null;
   enriched_at: string | null; last_post_at: string | null; posts_fetched: number | null; posts_30d: number | null;
   inbox_posts: number | null; cod_posts: number | null; shop_link_posts: number | null; comments_total: number | null;
   ads_checked: number | null; ads_active: number | null; ads_message_cta: number | null;
@@ -54,7 +54,10 @@ export function scorePage(i: ScoreInput, now = Date.now()): Score {
   const w = i.website_status;
   let websiteUnknown = false;
   if (w === 'none_found') add('shop', WEIGHTS.shop.noSite, 'No website found by search (this is not proof it has none)');
-  else if (w && (HAS_WEBSITE as string[]).includes(w)) add('shop', 0, 'Has a website. It may be a brochure site or a real shop; store platforms are not detected yet.');
+  else if (w && (HAS_WEBSITE as string[]).includes(w)) {
+    if (i.store_platform) add('shop', WEIGHTS.shop.hasStore, `Already has an online store (${i.store_platform})`);
+    else add('shop', 0, 'Has a website, but no store platform was detected. It may be a brochure site or a custom shop.');
+  }
   else if (w && (REVIEW_WEBSITE as string[]).includes(w)) { missing.push('Website needs a human look'); websiteUnknown = true; }
   else { missing.push('Website not checked yet'); websiteUnknown = true; }
 

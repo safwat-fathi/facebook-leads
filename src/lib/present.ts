@@ -19,6 +19,7 @@ export function webInfo(r: { website_status: WebsiteStatus | null; website_liste
   const only = r.website_listed_class === 'linkinbio' ? 'a link-in-bio page' : r.website_listed_class;
   return { text: 'Not checked yet', group: '', why: r.website_listed_class === 'none' ? 'The page lists no website, and no search has run yet.' : `The page only links to ${only}, and no search has run yet.` };
 }
+export const PLATFORM_LABEL: Record<string, string> = { shopify: 'Shopify', salla: 'Salla', zid: 'Zid', woocommerce: 'WooCommerce' };
 export const STAGE_LABEL: Record<string, string> = { new: 'New', reviewed: 'Reviewed', qualified: 'Qualified', contacted: 'Contacted', replied: 'Replied', converted: 'Converted', rejected: 'Rejected' };
 export const BASIS: Record<string, string> = {
   address: 'Egypt, read from the address on the page', area: "Egypt, read from the page's service area",

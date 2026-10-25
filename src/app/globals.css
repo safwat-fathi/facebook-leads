@@ -67,7 +67,9 @@ tbody tr:hover { background: color-mix(in srgb, var(--opp) 6%, var(--surface)); 
 
 .empty { padding: 32px 8px; color: var(--muted); }
 .empty p { margin: 0 0 12px; }
-.pager { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.pager { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.pager .sizes { display: flex; gap: 8px; align-items: center; margin-inline-end: auto; font-size: 13px; color: var(--muted); }
+.pager .pageno { font-size: 13px; color: var(--muted); }
 
 .scrim { position: fixed; inset: 0; background: rgba(10, 15, 20, 0.45); }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18); }

@@ -10,6 +10,10 @@ const Env = z.object({
   APP_ORIGIN: z.url('APP_ORIGIN must be the public URL, e.g. https://leads.example.com').transform((u) => new URL(u).origin),
   APIFY_TOKEN: optional,
   OPENROUTER_API_KEY: optional,
+  BREVO_API_KEY: optional, // email sending is off without it
+  OUTREACH_FROM_EMAIL: z.email().default('hello@tijaratk.com'), // must be a verified sender in Brevo
+  OUTREACH_FROM_NAME: z.string().min(1).default('Tijaratk'),
+  OUTREACH_DAILY_CAP: z.coerce.number().int().positive().default(20), // emails per 24 hours
   AGENT_MODEL: z.string().min(1).default('anthropic/claude-haiku-5.5'),
   DATA_DIR: z.string().min(1).default('./data'),
   MAX_JOB_USD: z.coerce.number().positive().default(3),

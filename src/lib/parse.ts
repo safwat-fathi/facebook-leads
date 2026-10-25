@@ -181,8 +181,26 @@ export function signalsFor(html: string, page: PageRef): Signals {
   };
 }
 
+// ---- store platform ----
+// Hosted shop builders and WooCommerce leave fingerprints in the HTML, headers or the domain itself. A bot-wall page has none of the
+// HTML ones, so the domain and headers are checked too.
+export const PLATFORMS = ['shopify', 'salla', 'zid', 'woocommerce'] as const;
+export type Platform = (typeof PLATFORMS)[number];
+const PLATFORM_MARKERS: [Platform, RegExp][] = [
+  ['shopify', /cdn\.shopify\.com|myshopify\.com|Shopify\.theme|shopify-section/i],
+  ['salla', /cdn\.salla\.network|salla\.sa\b|salla\.dev|salla-[a-z-]+/i],
+  ['zid', /\bzid\.store\b|\bzid\.sa\b|cdn\.zid\.sa|assets\.zid\./i],
+  ['woocommerce', /wp-content\/plugins\/woocommerce|woocommerce-(?:page|no-js)|wc-ajax|\bwc_add_to_cart_params\b/i],
+];
+export function detectPlatform(html: string, headers: { get(name: string): string | null }, url: string): Platform | null {
+  if (headers.get('x-shopify-stage') || headers.get('x-shopid')) return 'shopify';
+  const host = domainOf(url) ?? '';
+  for (const [name, re] of PLATFORM_MARKERS) if (re.test(host) || re.test(html)) return name;
+  return null;
+}
+
 // ---- website status rules ----
-export type SiteCheck = { url: string; final_url: string | null; dns: boolean; status: number | null; bot_wall: boolean; signals: Omit<Signals, 'title'>; title: string; error: string | null };
+export type SiteCheck = { url: string; final_url: string | null; dns: boolean; status: number | null; bot_wall: boolean; platform: Platform | null; signals: Omit<Signals, 'title'>; title: string; error: string | null };
 export type ListedStatus = 'listed_verified' | 'listed_unverified' | 'listed_blocked' | 'listed_unreachable' | 'listed_dead';
 export type FoundStatus = 'found_verified' | 'found_probable';
 export type WebsiteStatus = ListedStatus | FoundStatus | 'none_found';

@@ -3,7 +3,7 @@
 import 'server-only';
 import type { ApifyPort } from './apify';
 import type { ChatMsg, LlmPort, ToolDef } from './llm';
-import { domainOf, foundStatus, isOwnSiteCandidate, signalsFor, type FoundStatus, type PageRef, type SiteCheck } from './parse';
+import { domainOf, foundStatus, isOwnSiteCandidate, signalsFor, type FoundStatus, type PageRef, type Platform, type SiteCheck } from './parse';
 import type { CheckRow } from './pages';
 
 export const MAX_SEARCHES = 4, MAX_CALLS = 6, MAX_TURNS = 10;
@@ -19,7 +19,7 @@ export type Charger = {
 };
 export type AgentDeps = { apify: ApifyPort; llm: LlmPort; check: (url: string, page: PageRef, signal?: AbortSignal) => Promise<SiteCheck>; ctx: Charger };
 export type AgentOutcome = {
-  status: FoundStatus | 'none_found' | null; url?: string; domain?: string; note: string;
+  status: FoundStatus | 'none_found' | null; url?: string; domain?: string; platform?: Platform | null; note: string;
   evidence: { queries: string[]; searches_ok: number; candidates: Pick<SiteCheck, 'url' | 'status' | 'bot_wall' | 'signals'>[]; snippets: Record<string, { phone: boolean; name: boolean }>; turns: number };
 };
 
@@ -47,7 +47,7 @@ export async function runAgent(page: CheckRow, deps: AgentDeps): Promise<AgentOu
     links_on_facebook_that_are_not_a_website: (JSON.parse(page.website_listed ?? '[]') as { url: string }[]).map((l) => l.url),
   };
   const queries: string[] = [], snippets = new Map<string, { phone: boolean; name: boolean }>(), checks = new Map<string, SiteCheck>();
-  let result: { status: FoundStatus | 'none_found' | null; url?: string; domain?: string; note: string } | null = null;
+  let result: Pick<AgentOutcome, 'status' | 'url' | 'domain' | 'platform' | 'note'> | null = null;
   let calls = 0, turns = 0, searchesOk = 0, budgetStop = false; // "none found" is only a valid conclusion after a search actually ran
   const ref = pageRef(page);
 
@@ -85,7 +85,7 @@ export async function runAgent(page: CheckRow, deps: AgentDeps): Promise<AgentOu
       if (!d || !r) return { error: 'call check_site on this URL first' };
       const status = foundStatus(r, snippets.get(d));
       if (!status) return { error: 'no evidence this site belongs to the business, or it does not resolve. Try another candidate, or record an empty url if there is none.' };
-      result = { status, url: r.final_url ?? String(url), domain: d, note: n }; return { ok: true, status };
+      result = { status, url: r.final_url ?? String(url), domain: d, platform: r.platform, note: n }; return { ok: true, status };
     },
   };
 

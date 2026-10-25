@@ -1,6 +1,7 @@
 // Every assertion from probe/lib.mjs --selftest, ported, plus the status rules. Uses real Phase 0 record shapes.
 import { describe, expect, it } from 'vitest';
 import {
+  detectPlatform,
   businessType, canonCity, classifyWebsite, contacts, domainOf, foundStatus, HAS_WEBSITE, isOwnSiteCandidate, listedStatus, parseLocation,
   primaryCategory, signalsFor, whatsappOf,
 } from '@/lib/parse';
@@ -142,5 +143,23 @@ describe('website status rules', () => {
   it('signalsFor on a small page', () => {
     const s = signalsFor('<html><title>Hawaaeg - حوائج</title><a href="https://www.facebook.com/hawaaeg/">f</a> اتصل 010 8090 8442</html>', { url: 'https://www.facebook.com/hawaaeg/', title: 'Hawaaeg - حوائج | Cairo', phone: '+20 10 80908442', wa: '[]' });
     expect([s.fb_link, s.phone, s.name]).toEqual([true, true, true]);
+  });
+});
+
+describe('store platform detection', () => {
+  const h = (o: Record<string, string> = {}) => ({ get: (k: string) => o[k.toLowerCase()] ?? null });
+  it('recognises each platform from its HTML', () => {
+    expect(detectPlatform('<script src="https://cdn.shopify.com/s/files/x.js">', h(), 'https://a.example')).toBe('shopify');
+    expect(detectPlatform('<link href="https://cdn.salla.network/themes/a.css">', h(), 'https://a.example')).toBe('salla');
+    expect(detectPlatform('<script src="https://cdn.zid.sa/a.js">', h(), 'https://a.example')).toBe('zid');
+    expect(detectPlatform('<link href="/wp-content/plugins/woocommerce/assets/a.css">', h(), 'https://a.example')).toBe('woocommerce');
+  });
+  it('still works when the page is a bot wall: headers and the domain are enough', () => {
+    expect(detectPlatform('Just a moment...', h({ 'x-shopify-stage': 'production' }), 'https://a.example')).toBe('shopify');
+    expect(detectPlatform('Just a moment...', h(), 'https://shop.myshopify.com')).toBe('shopify');
+    expect(detectPlatform('Just a moment...', h(), 'https://a.example')).toBeNull();
+  });
+  it('a plain brochure site is not a store', () => {
+    expect(detectPlatform('<html><title>About us</title></html>', h(), 'https://a.example')).toBeNull();
   });
 });

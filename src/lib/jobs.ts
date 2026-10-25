@@ -216,7 +216,7 @@ async function runCheck(p: CheckParams, d: JobDeps, ctx: Ctx) {
       if (web.cls === 'real' && web.url) { // the page lists its own site: free check
         const r = await d.check(web.url, pageRef(page), ctx.signal);
         const status = listedStatus(r);
-        saveWebsite(page.fb_page_id, { url: web.url, domain: web.domain, status, evidence: { source: 'facebook_listed', hosted_on: web.hosted_on, check: r } });
+        saveWebsite(page.fb_page_id, { url: web.url, domain: web.domain, platform: r.platform, status, evidence: { source: 'facebook_listed', hosted_on: web.hosted_on, check: r } });
         count(status); ctx.log(`${page.title}: ${status} (${web.domain}, http ${r.status ?? r.error})`);
         continue;
       }
@@ -226,7 +226,7 @@ async function runCheck(p: CheckParams, d: JobDeps, ctx: Ctx) {
       const out = await runAgent(page, { apify: d.apify, llm: d.llm, check: d.check, ctx });
       const cost = ctx.spent() - before;
       if (!out.status) { ctx.log(`${page.title}: not saved (${out.note})`); if (out.note === 'budget reached') break; continue; }
-      saveWebsite(page.fb_page_id, { url: out.url, domain: out.domain, status: out.status, cost, evidence: { source: 'agent', model: d.model, note: out.note, ...out.evidence, cost_usd: cost } });
+      saveWebsite(page.fb_page_id, { url: out.url, domain: out.domain, platform: out.platform, status: out.status, cost, evidence: { source: 'agent', model: d.model, note: out.note, ...out.evidence, cost_usd: cost } });
       count(out.status); ctx.log(`${page.title}: ${out.status}${out.url ? ' ' + out.url : ''} (${usd(cost)}) ${out.note}`);
     } catch (e) {
       if (ctx.signal.aborted) break;

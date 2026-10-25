@@ -1,6 +1,6 @@
 // Filter parameters: validated with zod, then turned into a parameterised SQL where-clause (values are never concatenated into SQL).
 import { z } from 'zod';
-import { canonCity, HAS_WEBSITE, REVIEW_WEBSITE } from './parse';
+import { canonCity, HAS_WEBSITE, PLATFORMS, REVIEW_WEBSITE } from './parse';
 import { bad } from './errors';
 import { PITCH_FILTERS } from './score';
 
@@ -13,6 +13,7 @@ export const FilterSchema = z.object({
   q: text(), country: text(), city: text(), type: text(30), category: text(),
   minFollowers: count, maxFollowers: count,
   website: z.enum(['real', 'review', 'none', 'unknown']).optional(),
+  platform: z.enum([...PLATFORMS, 'none']).optional(), // 'none' = a site was found but no store platform detected
   whatsapp: z.enum(['confirmed', 'any', 'none']).optional(),
   stage: z.enum(STAGES).optional(),
   verdict: z.enum(['seller_yes', 'seller_no', 'none']).optional(),
@@ -26,10 +27,10 @@ export type Filters = z.infer<typeof FilterSchema>;
 
 // URL/query names -> schema names. Empty strings mean "any" (a cleared <select>), so they are dropped.
 const KEYS: Record<string, keyof Filters> = {
-  q: 'q', country: 'country', city: 'city', type: 'type', category: 'category', website: 'website', whatsapp: 'whatsapp', stage: 'stage', verdict: 'verdict', job: 'job', enriched: 'enriched', signal: 'signal', pitch: 'pitch',
+  q: 'q', country: 'country', city: 'city', type: 'type', category: 'category', website: 'website', platform: 'platform', whatsapp: 'whatsapp', stage: 'stage', verdict: 'verdict', job: 'job', enriched: 'enriched', signal: 'signal', pitch: 'pitch',
   'min-followers': 'minFollowers', 'max-followers': 'maxFollowers',
 };
-const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Job', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
+const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', platform: 'Store platform', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Job', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
 const NUMERIC = new Set(['minFollowers', 'maxFollowers', 'job']);
 function say(i: z.core.$ZodIssue): string {
   const key = String(i.path[0]);
@@ -83,5 +84,7 @@ export function buildWhere(f: Filters): { where: string; params: Record<string, 
   else if (f.website === 'review') w.push(`website_status in (${list(REVIEW_WEBSITE)})`);
   else if (f.website === 'none') w.push("website_status = 'none_found'");
   else if (f.website === 'unknown') w.push('website_status is null');
+  if (f.platform === 'none') w.push(`website_status in (${list(HAS_WEBSITE)}) and store_platform is null`);
+  else if (f.platform) { w.push('store_platform = :platform'); p.platform = f.platform; }
   return { where: w.length ? 'where ' + w.join(' and ') : '', params: p };
 }

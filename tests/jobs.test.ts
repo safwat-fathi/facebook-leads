@@ -42,7 +42,7 @@ function fakeLlm(plan: (name: string, step: number, last: Record<string, unknown
   };
   return { port, turns };
 }
-const siteCheck = (over: Partial<SiteCheck>): SiteCheck => ({ url: '', final_url: null, dns: true, status: 200, bot_wall: false, signals: { fb_link: false, phone: false, name: false }, title: '', error: null, ...over });
+const siteCheck = (over: Partial<SiteCheck>): SiteCheck => ({ url: '', final_url: null, dns: true, status: 200, bot_wall: false, platform: null, signals: { fb_link: false, phone: false, name: false }, title: '', error: null, ...over });
 const check = vi.fn(async (url: string, _page: PageRef): Promise<SiteCheck> => {
   if (url.includes('cairosales.com')) return siteCheck({ url, status: 403, bot_wall: true });
   if (url.includes('samirandaly.com')) return siteCheck({ url, final_url: url, signals: { fb_link: false, phone: true, name: true } });
