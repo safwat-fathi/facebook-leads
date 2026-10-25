@@ -33,6 +33,8 @@ create table if not exists signals (
 create table if not exists spend (
   id integer primary key autoincrement, job_id integer references jobs(id),
   provider text not null check (provider in ('apify', 'openrouter')), usd real not null, note text, at text not null);
+create table if not exists saved_searches (
+  id integer primary key autoincrement, name text not null unique, params text not null, created_at text not null);
 create index if not exists spend_at on spend(at);
 create index if not exists jobs_status on jobs(status);
 `;
