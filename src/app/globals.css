@@ -1,11 +1,12 @@
 :root {
   --bg: #f3f5f7; --surface: #ffffff; --ink: #1b2430; --muted: #5b6776; --line: #d9dee5;
   --opp: #0f766e; --has: #3b5b8c; --review: #b45309; --reject: #b42318; --focus: #0f766e;
+  --replied: #6d28d9; --converted: #15803d;
   --font: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", "Geeza Pro", sans-serif;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #11161c; --surface: #1a2129; --ink: #e6ebf1; --muted: #9aa7b6; --line: #2b3541; --opp: #3fb8a8; --has: #7fa2d6; --review: #e0a04a; --reject: #f0786c; --focus: #3fb8a8; }
+  :root { --bg: #11161c; --surface: #1a2129; --ink: #e6ebf1; --muted: #9aa7b6; --line: #2b3541; --opp: #3fb8a8; --has: #7fa2d6; --review: #e0a04a; --reject: #f0786c; --focus: #3fb8a8; --replied: #b79af0; --converted: #5ac07a; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font); }
@@ -61,6 +62,9 @@ tbody tr:hover { background: color-mix(in srgb, var(--opp) 6%, var(--surface)); 
 .sub.guess { font-style: italic; }
 .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; font-variant-numeric: tabular-nums; }
 .state { font-weight: 600; }
+.stage { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--st); }
+.st-new { --st: var(--muted); } .st-reviewed { --st: var(--has); } .st-qualified { --st: var(--opp); } .st-contacted { --st: var(--review); }
+.st-replied { --st: var(--replied); } .st-converted { --st: var(--converted); } .st-rejected { --st: var(--reject); }
 .state.opp { color: var(--opp); } .state.has { color: var(--has); } .state.review { color: var(--review); }
 .judge { display: inline-flex; gap: 4px; }
 .judge button { min-width: 32px; min-height: 32px; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }

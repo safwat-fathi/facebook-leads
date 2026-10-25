@@ -7,6 +7,7 @@ import type { PageDetail } from '@/lib/pages';
 import type { OutreachState } from '@/lib/outreach';
 import { postJson } from './api';
 import { Outreach } from './Outreach';
+import { StageBadge } from './StageBadge';
 
 const nf = new Intl.NumberFormat('en');
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' }) : '');
@@ -141,6 +142,7 @@ export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: s
           <select id="d-stage" defaultValue={d.stage} onChange={(e) => save({ stage: e.target.value })}>
             {Object.entries(STAGE_LABEL).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
           </select>
+          <StageBadge stage={d.stage} />
         </div>
         {d.stage === 'contacted' && (() => {
           const via = (d.contacted_via ?? '').split(',').filter(Boolean);
