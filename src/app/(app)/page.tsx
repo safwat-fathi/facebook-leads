@@ -51,7 +51,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     <>
       <header className="top">
         <p className="summary" aria-live="polite">
-          <b>{full.format(s.total)}</b> pages. <b>{s.whatsappConfirmed}</b> link WhatsApp, <b>{s.hasWebsite}</b> have a website, <b>{s.noneFound}</b> had no website found, <b>{s.unchecked}</b> not checked yet. <b>{s.enriched}</b> have posts and ads data.
+          <b>{full.format(s.total)}</b> items. <b>{s.whatsappConfirmed}</b> link WhatsApp, <b>{s.hasWebsite}</b> have a website, <b>{s.noneFound}</b> had no website found, <b>{s.unchecked}</b> not checked yet. <b>{s.enriched}</b> have posts and ads data.
           {(s.sellerYes > 0 || s.sellerNo > 0) && <> You marked <b>{s.sellerYes}</b> as real sellers and <b>{s.sellerNo}</b> as not.</>}
         </p>
       </header>
@@ -59,7 +59,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <main id="main-content">
         {filterError && <p className="error" role="alert">{filterError}</p>}
         <p className="count" aria-live="polite">
-          {list.total ? `${offset + 1}–${to} of ${full.format(list.total)} pages` : ''}
+          {list.total ? `${offset + 1}–${to} of ${full.format(list.total)} items (page ${pageNo} of ${pageCount})` : ''}
           {list.total > 0 && <> &middot; <a href={`/api/export?${base}`} download>Download CSV</a></>}
           {list.total > 0 && <> &middot; <CheckWebsites filters={filters} mode="website_check" /> <CheckWebsites filters={filters} mode="enrich" /></>}
         </p>
