@@ -4,7 +4,7 @@ import { resetEnvForTests } from '@/lib/env';
 import { HttpError } from '@/lib/errors';
 import { recordToRow } from '@/lib/ingest';
 import { parseFilters } from '@/lib/filters';
-import { activeJobCount, budgetStatus, cancelJob, createJob, estimate, getJob, listJobs, processNext, recoverInterrupted, type JobDeps } from '@/lib/jobs';
+import { activeJobCount, discoveryRuns, budgetStatus, cancelJob, createJob, estimate, getJob, listJobs, processNext, recoverInterrupted, type JobDeps } from '@/lib/jobs';
 import type { ApifyPort, RunResult } from '@/lib/apify';
 import type { ChatMsg, LlmPort, ToolCall } from '@/lib/llm';
 import { pageDetail, queryPages, stats, upsertPage } from '@/lib/pages';
@@ -83,6 +83,18 @@ describe('estimates', () => {
     const e = estimate(websiteCheck());
     expect(e.detail).toMatchObject({ total: 4, listed: 2, needAgent: 2 });
     expect(e.usd).toBeCloseTo(2 * 0.025, 6);
+  });
+});
+
+describe('discoveryRuns', () => {
+  it('lists started Find-pages jobs newest first with how many pages each found, counting pages it already knew', () => {
+    const a = createJob(discover({}, 1)) as { id: number }, b = createJob(discover({}, 1)) as { id: number }, c = createJob(websiteCheck()) as { id: number };
+    getDb().prepare("update jobs set status = 'done' where id in (?, ?, ?)").run(a.id, c.id, c.id);
+    getDb().prepare("update pages set discovered_by = discovered_by || ',job:' || ? where fb_page_id in (select fb_page_id from pages limit 2)").run(String(a.id));
+    const runs = discoveryRuns();
+    expect(runs.map((r) => r.id)).toEqual([a.id]); // b is still queued, c is not a search
+    expect(runs[0].found).toBe(2);
+    void b;
   });
 });
 

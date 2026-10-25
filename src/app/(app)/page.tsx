@@ -6,6 +6,8 @@ import { VerdictButtons } from '@/components/VerdictButtons';
 import { requireAuth } from '@/lib/auth';
 import { filtersToQuery, parseFilters, type Filters } from '@/lib/filters';
 import { outreachState } from '@/lib/outreach';
+import { discoveryRuns } from '@/lib/jobs';
+import { searchLabel } from '@/lib/job-present';
 import { facets, pageDetail, queryPages, SORT_KEYS, stats } from '@/lib/pages';
 import { PITCH_LABEL, PLATFORM_LABEL, pitchTone, safeUrl, signalTags, STAGE_LABEL, webInfo } from '@/lib/present';
 
@@ -55,7 +57,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           {(s.sellerYes > 0 || s.sellerNo > 0) && <> You marked <b>{s.sellerYes}</b> as real sellers and <b>{s.sellerNo}</b> as not.</>}
         </p>
       </header>
-      <FilterBar facets={facets()} values={values} />
+      <FilterBar facets={facets()} values={values} searches={discoveryRuns().map((r) => ({ id: r.id, label: searchLabel(r.params, r.created_at, r.found) }))} />
       <main id="main-content">
         {filterError && <p className="error" role="alert">{filterError}</p>}
         <p className="count" aria-live="polite">

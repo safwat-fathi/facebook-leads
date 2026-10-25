@@ -4,10 +4,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { STAGE_LABEL } from '@/lib/present';
 
 type Facets = { countries: { v: string; n: number }[]; cities: { v: string; n: number }[]; types: { v: string; n: number }[] };
-const FIELDS = ['q', 'min-followers', 'max-followers', 'country', 'city', 'type', 'whatsapp', 'website', 'platform', 'stage', 'verdict', 'enriched', 'signal', 'pitch'];
+const FIELDS = ['q', 'min-followers', 'max-followers', 'country', 'city', 'type', 'whatsapp', 'website', 'platform', 'stage', 'verdict', 'job', 'enriched', 'signal', 'pitch'];
 
 // Filters live in the URL. The inputs are uncontrolled; every change rewrites the query (debounced for typing) and keeps sort order.
-export function FilterBar({ facets, values }: { facets: Facets; values: Record<string, string> }) {
+export function FilterBar({ facets, values, searches }: { facets: Facets; values: Record<string, string>; searches: { id: number; label: string }[] }) {
   const router = useRouter(), path = usePathname(), current = useSearchParams();
   const form = useRef<HTMLFormElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -48,6 +48,7 @@ export function FilterBar({ facets, values }: { facets: Facets; values: Record<s
         {select('whatsapp', 'WhatsApp', [['confirmed', 'Linked on the page'], ['any', 'Linked or mobile guess'], ['none', 'None']])}
         {select('website', 'Website', [['real', 'Has a website'], ['none', 'No website found'], ['review', 'Needs review'], ['unknown', 'Not checked yet']])}
         {select('platform', 'Store platform', [['shopify', 'Shopify'], ['salla', 'Salla'], ['zid', 'Zid'], ['woocommerce', 'WooCommerce'], ['none', 'Site, no store detected']])}
+        {select('job', 'Search', searches.map((s) => [String(s.id), s.label]))}
         {select('stage', 'Stage', Object.entries(STAGE_LABEL))}
         {select('verdict', 'Seller check', [['seller_yes', 'Marked real seller'], ['seller_no', 'Marked not a seller'], ['none', 'Not marked yet']])}
         {select('enriched', 'Posts and ads', [['yes', 'Enriched'], ['no', 'Not enriched yet']])}

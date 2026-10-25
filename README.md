@@ -46,7 +46,7 @@ Secrets go in `.env`/`.env.local` only (both git-ignored), never in `.env.exampl
 ## Using it
 
 ### Leads
-Filters live in the URL, so any view can be bookmarked. Click a page name to open its details: how we know it is in Egypt, its WhatsApp number (*linked on the page* is reliable; *mobile guess* is just its listed mobile), the website evidence, and your stage, notes and ✓/✗ mark.
+Filters live in the URL, so any view can be bookmarked. The **Search** filter lists your earlier Find-pages searches (terms, city, date, pages found); it also includes pages a search found that you already had. Click a page name to open its details: how we know it is in Egypt, its WhatsApp number (*linked on the page* is reliable; *mobile guess* is just its listed mobile), the website evidence, and your stage, notes and ✓/✗ mark.
 
 **Website status meanings**
 

@@ -30,7 +30,7 @@ const KEYS: Record<string, keyof Filters> = {
   q: 'q', country: 'country', city: 'city', type: 'type', category: 'category', website: 'website', platform: 'platform', whatsapp: 'whatsapp', stage: 'stage', verdict: 'verdict', job: 'job', enriched: 'enriched', signal: 'signal', pitch: 'pitch',
   'min-followers': 'minFollowers', 'max-followers': 'maxFollowers',
 };
-const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', platform: 'Store platform', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Job', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
+const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', platform: 'Store platform', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Search', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
 const NUMERIC = new Set(['minFollowers', 'maxFollowers', 'job']);
 function say(i: z.core.$ZodIssue): string {
   const key = String(i.path[0]);

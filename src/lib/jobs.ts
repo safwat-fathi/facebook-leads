@@ -39,6 +39,13 @@ export const getJob = (id: number): JobDetail | null => { const r = q1<JobDetail
 export const spentLast24h = () => q1<{ s: number }>("select coalesce(sum(usd), 0) s from spend where at > :since", { since: new Date(Date.now() - 24 * 3600_000).toISOString() })!.s;
 // Money already promised to queued/running jobs but not spent yet.
 const committed = () => q1<{ s: number }>("select coalesce(sum(max(budget_usd - spent_usd, 0)), 0) s from jobs where status in ('queued', 'running')")!.s;
+/** Finished or running Find-pages jobs, newest first, with how many pages each one found (including pages it already knew). */
+export function discoveryRuns(limit = 50): { id: number; params: DiscoverParams; created_at: string; found: number }[] {
+  return q<{ id: number; params: string; created_at: string }>("select id, params, created_at from jobs where kind = 'discover' and status != 'queued' order by id desc limit :limit", { limit }).map((j) => ({
+    id: j.id, params: JSON.parse(j.params) as DiscoverParams, created_at: j.created_at,
+    found: q1<{ n: number }>("select count(*) n from pages where instr(',' || discovered_by || ',', ',job:' || :id || ',') > 0", { id: String(j.id) })!.n, // a string: see the job filter in filters.ts
+  }));
+}
 /** Jobs waiting or running; the nav shows a pulse while this is above zero. */
 export const activeJobCount = () => q1<{ n: number }>("select count(*) n from jobs where status in ('queued', 'running')")!.n;
 export const budgetStatus = () => { const env = getEnv(); const spent = spentLast24h(); return { spent24h: spent, dailyLimit: env.DAILY_BUDGET_USD, maxJob: env.MAX_JOB_USD, available: Math.max(0, env.DAILY_BUDGET_USD - spent - committed()) }; };

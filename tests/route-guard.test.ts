@@ -29,7 +29,7 @@ describe('pages', () => {
     const src = readFileSync(join(APP, file), 'utf8');
     expect(src).toMatch(/await requireAuth\(\)/);
     const at = src.indexOf('await requireAuth()');
-    for (const dataCall of ['queryPages(', 'pageDetail(', 'listJobs(', 'getJob(', 'stats(', 'facets(', 'costTotals(', 'listSpend(']) {
+    for (const dataCall of ['queryPages(', 'pageDetail(', 'listJobs(', 'getJob(', 'stats(', 'facets(', 'costTotals(', 'discoveryRuns(', 'listSpend(']) {
       const i = src.indexOf(dataCall);
       if (i >= 0) expect(at, `${file}: requireAuth() must come before ${dataCall}`).toBeLessThan(i);
     }
