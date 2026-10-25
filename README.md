@@ -79,10 +79,11 @@ Every page gets two scores out of 100, computed on the fly from what is stored (
 - **The weights are first guesses.** They live in one object in `src/lib/score.ts` (`WEIGHTS`, `THRESHOLD`) and are pinned by `tests/score.test.ts`, so retune both together. Scoring ranks fit, not willingness to pay.
 
 ### Contact (outreach)
-Open a page and use **Contact**: *Draft message* asks the model (OpenRouter, about a cent, counted in the daily budget) for a short Arabic message based on the page's fit and posts. You edit it, then **Send email** (Brevo, from `OUTREACH_FROM_EMAIL`) or **Open in WhatsApp** (a prefilled chat; you press send in WhatsApp). Nothing is sent without that click.
+Open a page and use **Contact**: *Draft message* asks the model (OpenRouter, about a cent, counted in the daily budget) for a short Arabic message based on the page's fit and posts. The draft is saved on the page (edits save when you leave a field), so closing the drawer keeps it; sending clears it. The model is also told the page's website, store platform, whether you confirmed the site yourself, and your notes. You edit it, then **Send email** (Brevo, from `OUTREACH_FROM_EMAIL`) or **Open in WhatsApp** (a prefilled chat; you press send in WhatsApp). Nothing is sent without that click.
 - Every email gets an opt-out line. **Do not contact** adds the page's email and phone numbers to a list that blocks both channels; use it when someone replies "stop".
 - Refused: a page marked not a seller, outside Egypt or abandoned; a page on the do-not-contact list; an address already emailed; anything past `OUTREACH_DAILY_CAP`.
 - Each send is kept under *History*. A sent email moves a new lead to *Contacted* (never back from *Replied* or *Converted*).
+- **I confirmed this page's website myself** (Website section of the drawer): enter the address and, if you know it, the platform. It counts as having a website, shows as "confirmed by you", and Check websites never changes it. *Reset to not checked* removes it.
 - Platform detection: the website check also records Shopify, Salla, Zid or WooCommerce when it can see them. A detected store lowers the web-shop score; existing pages get it the next time they are re-checked.
 
 ### Jobs

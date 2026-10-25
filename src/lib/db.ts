@@ -11,7 +11,7 @@ create table if not exists pages (
   country text, city text, district text, location_source text,
   phone text, email text, wa text, whatsapp text, whatsapp_source text, ad_running integer not null default 0,
   website_listed text, website_listed_class text,
-  website_url text, website_domain text, website_status text, website_evidence text, website_checked_at text, agent_cost_usd real, store_platform text,
+  website_url text, website_domain text, website_status text, website_evidence text, website_checked_at text, agent_cost_usd real, store_platform text, draft_subject text, draft_body text,
   stage text not null default 'new', notes text, verdict text,
   raw text, discovered_by text, first_seen text, last_seen text);
 create table if not exists jobs (
@@ -46,7 +46,7 @@ create index if not exists spend_at on spend(at);
 create index if not exists jobs_status on jobs(status);
 `;
 // Columns added after the first release of `pages`: bring older databases (like the one from probe/) up to date in place.
-const LATE_COLUMNS: [string, string][] = [['category', 'text'], ['business_type', 'text'], ['whatsapp', 'text'], ['whatsapp_source', 'text'], ['stage', "text not null default 'new'"], ['notes', 'text'], ['verdict', 'text'], ['store_platform', 'text']];
+const LATE_COLUMNS: [string, string][] = [['category', 'text'], ['business_type', 'text'], ['whatsapp', 'text'], ['whatsapp_source', 'text'], ['stage', "text not null default 'new'"], ['notes', 'text'], ['verdict', 'text'], ['store_platform', 'text'], ['draft_subject', 'text'], ['draft_body', 'text']];
 
 // Early databases limited jobs.kind with a CHECK constraint, which SQLite cannot alter: rebuild the table (the documented procedure:
 // foreign keys off, copy, drop, rename) so new job kinds are accepted. Rows and ids are preserved.

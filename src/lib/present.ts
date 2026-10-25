@@ -11,6 +11,7 @@ const WEB: Record<WebsiteStatus, WebInfo> = {
   listed_dead: { text: 'Dead domain', group: 'review', why: 'The page lists a domain that no longer exists.' },
   found_verified: { text: 'Website found', group: 'has', why: 'Found by search and tied to this page by its phone number or a link back.' },
   found_probable: { text: 'Possible website', group: 'review', why: 'Found by search and matched by name only. Needs a human look.' },
+  confirmed_manual: { text: 'Website, confirmed by you', group: 'has', why: 'You confirmed this site yourself. Website checks leave it alone.' },
   none_found: { text: 'No website found', group: 'opp', why: 'Searches found no site tied to this page. That is not proof it has none.' },
 };
 export function webInfo(r: { website_status: WebsiteStatus | null; website_listed_class: string | null }): WebInfo {

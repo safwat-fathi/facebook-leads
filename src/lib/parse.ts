@@ -203,7 +203,7 @@ export function detectPlatform(html: string, headers: { get(name: string): strin
 export type SiteCheck = { url: string; final_url: string | null; dns: boolean; status: number | null; bot_wall: boolean; platform: Platform | null; signals: Omit<Signals, 'title'>; title: string; error: string | null };
 export type ListedStatus = 'listed_verified' | 'listed_unverified' | 'listed_blocked' | 'listed_unreachable' | 'listed_dead';
 export type FoundStatus = 'found_verified' | 'found_probable';
-export type WebsiteStatus = ListedStatus | FoundStatus | 'none_found';
+export type WebsiteStatus = ListedStatus | FoundStatus | 'none_found' | 'confirmed_manual'; // confirmed_manual: the person checked it; no job overwrites it
 // A page that LISTS a real domain has a website. Only DNS/connection failure downgrades it; a 403 bot-wall does not.
 export function listedStatus(r: Pick<SiteCheck, 'dns' | 'status' | 'error' | 'signals'>): ListedStatus {
   if (!r.dns || r.error === 'ECONNREFUSED') return 'listed_dead'; // no DNS record, or nothing listening
@@ -218,5 +218,5 @@ export function foundStatus(r: Pick<SiteCheck, 'dns' | 'status' | 'signals'>, sn
   const soft = r.signals.name || snippet.name;
   return hard ? 'found_verified' : soft ? 'found_probable' : null;
 }
-export const HAS_WEBSITE: WebsiteStatus[] = ['listed_verified', 'listed_unverified', 'listed_blocked', 'found_verified'];
+export const HAS_WEBSITE: WebsiteStatus[] = ['listed_verified', 'listed_unverified', 'listed_blocked', 'found_verified', 'confirmed_manual'];
 export const REVIEW_WEBSITE: WebsiteStatus[] = ['listed_dead', 'listed_unreachable', 'found_probable'];

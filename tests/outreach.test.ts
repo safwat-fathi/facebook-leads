@@ -3,7 +3,7 @@ import { resetEnvForTests } from '@/lib/env';
 import { openDb, useDbForTests, getDb } from '@/lib/db';
 import { recordToRow } from '@/lib/ingest';
 import { draftMessage, outreachState, sendEmail, setDoNotContact, whatsappLink, type OutreachDeps } from '@/lib/outreach';
-import { upsertPage } from '@/lib/pages';
+import { savePage, upsertPage } from '@/lib/pages';
 import type { MailPort } from '@/lib/brevo';
 import type { LlmPort } from '@/lib/llm';
 import { RECORDS } from './fixtures/records';
@@ -93,6 +93,19 @@ describe('draftMessage', () => {
     const out = await draftMessage(id, deps({ llm: llm('الموضوع: متجر خاص بكم\n\nأهلاً، عندنا فكرة لمتجركم.') }));
     expect(out).toEqual({ subject: 'متجر خاص بكم', body: 'أهلاً، عندنا فكرة لمتجركم.' });
     expect((getDb().prepare("select sum(usd) s from spend where provider = 'openrouter'").get() as { s: number }).s).toBeCloseTo(0.002);
+  });
+  it('saves the draft on the page, and sending clears it', async () => {
+    await draftMessage(id, deps({ llm: llm('موضوع\n\nنص الرسالة') }));
+    expect(getDb().prepare('select draft_subject s, draft_body b from pages where fb_page_id = ?').get(id)).toMatchObject({ s: 'موضوع', b: 'نص الرسالة' });
+    await sendEmail(id, { subject: 'موضوع', body: 'نص الرسالة' }, deps());
+    expect(getDb().prepare('select draft_subject s, draft_body b from pages where fb_page_id = ?').get(id)).toMatchObject({ s: null, b: null });
+  });
+  it('tells the model when you confirmed the website by hand', async () => {
+    savePage(id, { website: { url: 'https://shop.example.com', platform: 'zid' } });
+    const port = llm('s\n\nb');
+    await draftMessage(id, deps({ llm: port }));
+    const sent = JSON.parse(vi.mocked(port.chat).mock.calls[0][0][1].content as string);
+    expect(sent.page).toMatchObject({ website: 'shop.example.com', store_platform: 'zid', website_confirmed_by_sender: true });
   });
   it('gives the model the website, store platform and your notes', async () => {
     getDb().prepare("update pages set website_domain = 'shop.example.com', store_platform = 'salla', notes = 'met at the fair' where fb_page_id = ?").run(id);

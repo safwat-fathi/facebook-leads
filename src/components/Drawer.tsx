@@ -47,6 +47,11 @@ export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: s
   const ev = d.website_evidence;
   const note = typeof ev?.note === 'string' ? ev.note : '';
   const sc = d.score;
+  const manual = d.website_status === 'confirmed_manual';
+  // Blank would read as "not checked", so a checked site with no platform says so.
+  const platformText = d.store_platform ? PLATFORM_LABEL[d.store_platform] : web.group === 'has' && d.website_checked_at ? (manual ? 'Not set' : 'None detected') : '';
+  const [site, setSite] = useState(manual ? d.website_url ?? '' : '');
+  const [platform, setPlatform] = useState<string>(manual ? d.store_platform ?? '' : '');
   return (
     <dialog ref={ref} className="drawer" aria-labelledby="d-title"
       onClose={() => { document.querySelector<HTMLElement>(`[data-open-id="${CSS.escape(d.fb_page_id)}"]`)?.focus(); router.replace(closeHref, { scroll: false }); }}
@@ -85,10 +90,29 @@ export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: s
         <dl className="facts">
           <Fact label="Site">{d.website_url && <Link href={d.website_url} />}</Fact>
           <Fact label="Links on the page">{d.website_listed.length > 0 && d.website_listed.map((l, i) => <div key={i}><Link href={l.url} /><span className="note"> {l.cls}</span></div>)}</Fact>
-          <Fact label="Store platform">{d.store_platform ? PLATFORM_LABEL[d.store_platform] : ''}</Fact>
+          <Fact label="Store platform">{platformText}</Fact>
           <Fact label="Last checked">{when(d.website_checked_at)}</Fact>
           <Fact label="Search cost">{d.agent_cost_usd ? usd(d.agent_cost_usd) : ''}</Fact>
         </dl>
+        <details>
+          <summary>{manual ? 'Edit the website you confirmed' : 'I confirmed this page\u2019s website myself'}</summary>
+          <div className="review-row">
+            <label htmlFor="d-site">Website</label>
+            <input id="d-site" dir="ltr" inputMode="url" placeholder="https://example.com" maxLength={300} value={site} onChange={(e) => setSite(e.target.value)} />
+          </div>
+          <div className="review-row">
+            <label htmlFor="d-platform">Store platform</label>
+            <select id="d-platform" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+              <option value="">Not known</option>
+              {Object.entries(PLATFORM_LABEL).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+            </select>
+          </div>
+          <div className="review-row">
+            <button type="button" className="quiet" disabled={!site.trim()} onClick={() => save({ website: { url: site, platform: platform || null } })}>Save website</button>
+            {d.website_status && <button type="button" className="quiet" onClick={() => { setSite(''); setPlatform(''); save({ website: null }); }}>Reset to not checked</button>}
+          </div>
+          <p className="note">Saved as &ldquo;confirmed by you&rdquo;: it counts as having a website and Check websites will not change it.</p>
+        </details>
         {note && <p className="note">{note}</p>}
         {ev && <details><summary>Evidence</summary><pre className="evidence" dir="ltr">{JSON.stringify(ev, null, 2)}</pre></details>}
         <h3>Activity</h3>

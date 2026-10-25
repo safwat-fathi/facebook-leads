@@ -56,6 +56,25 @@ describe('filters', () => {
     expect(find({ whatsapp: 'confirmed' })).toEqual(['100', '101', '103']);
     expect(find({ whatsapp: 'none' }).length).toBeGreaterThan(0);
   });
+  it('a website you confirm by hand counts as a website, keeps its platform and is never re-checked', () => {
+    savePage('100', { website: { url: 'shop.example.com/ar', platform: 'salla' } });
+    expect(pageDetail('100')).toMatchObject({ website_status: 'confirmed_manual', website_url: 'https://shop.example.com/ar', website_domain: 'shop.example.com', store_platform: 'salla' });
+    expect(find({ website: 'real' })).toEqual(['100']);
+    const checked = (recheck: boolean) => selectForCheck({}, { limit: 100, recheck }).map((r) => r.fb_page_id);
+    expect(checked(true)).not.toContain('100'); expect(checked(false)).not.toContain('100');
+    savePage('100', { website: null });
+    expect(pageDetail('100')).toMatchObject({ website_status: null, website_url: null, store_platform: null });
+    expect(checked(false)).toContain('100');
+  });
+  it('rejects a manual website that is not a web address', () => {
+    for (const url of ['javascript:alert(1)', 'not a url', 'ftp://example.com']) expect(() => savePage('100', { website: { url } })).toThrow();
+  });
+  it('stores a draft on the page and clears it with null', () => {
+    savePage('100', { draft_subject: 's', draft_body: 'b' });
+    expect(pageDetail('100')).toMatchObject({ draft_subject: 's', draft_body: 'b' });
+    savePage('100', { draft_subject: null, draft_body: null });
+    expect(pageDetail('100')).toMatchObject({ draft_subject: null, draft_body: null });
+  });
   it('platform filter and saved platform', () => {
     saveWebsite('100', { status: 'listed_verified', platform: 'shopify' }); saveWebsite('101', { status: 'listed_verified' }); saveWebsite('102', { status: 'none_found' });
     expect(find({ platform: 'shopify' })).toEqual(['100']);

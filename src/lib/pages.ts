@@ -3,7 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 import { getDb } from './db';
 import { buildWhere, STAGES, VERDICTS, type Filters } from './filters';
-import { HAS_WEBSITE, REVIEW_WEBSITE, type Platform, type WebsiteStatus } from './parse';
+import { domainOf, HAS_WEBSITE, PLATFORMS, REVIEW_WEBSITE, type Platform, type WebsiteStatus } from './parse';
 import { bad, HttpError } from './errors';
 import type { PageRow } from './ingest';
 import type { AdSignals, PostSignals } from './signals';
@@ -51,17 +51,36 @@ export function saveWebsite(id: string, r: WebsiteResult) {
     website_checked_at=:at, agent_cost_usd=:cost, store_platform=:platform where fb_page_id=:id`).run({ id, url: r.url ?? null, domain: r.domain ?? null, platform: r.platform ?? null, status: r.status, evidence: JSON.stringify(r.evidence ?? {}), at: new Date().toISOString(), cost: r.cost ?? null });
 }
 
+// A site the person checked by hand. Without a scheme https is assumed; only http(s) with a real domain is accepted.
+const ManualWebsite = z.object({ url: z.string().trim().min(1).max(300), platform: z.enum(PLATFORMS).nullable().optional() }).strict();
 const Update = z.object({
   stage: z.enum(STAGES).optional(),
   verdict: z.enum(VERDICTS).nullable().optional(),
   notes: z.string().max(5000, 'notes must be at most 5000 characters').optional(),
+  draft_subject: z.string().max(150).nullable().optional(),
+  draft_body: z.string().max(5000).nullable().optional(),
+  website: ManualWebsite.nullable().optional(), // null removes it (back to "not checked yet")
 }).strict();
+function setManualWebsite(id: string, w: z.infer<typeof ManualWebsite> | null) {
+  let url: string | null = null;
+  if (w) {
+    try { const u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(w.url) ? w.url : `https://${w.url}`); if (u.protocol === 'http:' || u.protocol === 'https:') url = u.href; } catch { /* rejected below */ }
+    if (!url || !domainOf(url)) throw bad('website: enter a valid web address, for example https://example.com');
+  }
+  const res = getDb().prepare(`update pages set website_url=:url, website_domain=:domain, website_status=:status, website_evidence=:evidence,
+    website_checked_at=:at, agent_cost_usd=null, store_platform=:platform where fb_page_id=:id`).run({
+    id, url, domain: url ? domainOf(url) : null, status: url ? 'confirmed_manual' : null, evidence: url ? JSON.stringify({ source: 'manual' }) : null,
+    at: url ? new Date().toISOString() : null, platform: url ? w?.platform ?? null : null });
+  if (!res.changes) throw new HttpError(404, 'no such page');
+}
 export function savePage(id: string, body: unknown) {
   const r = Update.safeParse(body);
   if (!r.success) throw bad(r.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`).join('; '));
-  const u = r.data;
+  const { website, ...u } = r.data;
   const keys = (Object.keys(u) as (keyof typeof u)[]).filter((k) => u[k] !== undefined);
-  if (!keys.length) throw bad('nothing to update');
+  if (!keys.length && website === undefined) throw bad('nothing to update');
+  if (website !== undefined) setManualWebsite(id, website);
+  if (!keys.length) return;
   const sets = keys.map((k) => `${k} = :${k}`).join(', '); // keys come from the fixed schema above, never from the client
   const res = getDb().prepare(`update pages set ${sets} where fb_page_id = :id`).run({ ...Object.fromEntries(keys.map((k) => [k, u[k] ?? null])), id });
   if (!res.changes) throw new HttpError(404, 'no such page');
@@ -104,7 +123,7 @@ export type PageDetail = {
   fb_page_id: string; url: string; title: string | null; categories: string | null; category: string | null; business_type: string | null; followers: number;
   country: string | null; city: string | null; district: string | null; location_source: string | null;
   phone: string | null; email: string | null; whatsapp: string | null; whatsapp_source: string | null; ad_running: number;
-  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; store_platform: Platform | null; website_checked_at: string | null; agent_cost_usd: number | null;
+  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; store_platform: Platform | null; draft_subject: string | null; draft_body: string | null; website_checked_at: string | null; agent_cost_usd: number | null;
   stage: string; notes: string | null; verdict: string | null; discovered_by: string | null; first_seen: string | null; last_seen: string | null;
   wa: string[]; website_listed: { url: string; cls: string }[]; website_evidence: Record<string, unknown> | null;
   intro: string | null; address: string | null; ad_status: string | null; creation_date: string | null;
@@ -181,7 +200,8 @@ export function stats() {
 export type CheckRow = { fb_page_id: string; url: string | null; title: string | null; city: string | null; phone: string | null; wa: string | null; categories: string | null; website_listed: string | null; website_listed_class: string | null; raw: string };
 export function selectForCheck(f: Filters, o: { limit: number; recheck: boolean }): CheckRow[] {
   const { where, params } = whereOf(f);
-  const extra = o.recheck ? '' : `${where ? ' and' : 'where'} website_status is null`;
+  // A site you confirmed yourself is never re-checked, even with recheck on.
+  const extra = `${where ? ' and' : 'where'} ${o.recheck ? "coalesce(website_status, '') != 'confirmed_manual'" : 'website_status is null'}`;
   return rows<CheckRow>(`select fb_page_id, url, title, city, phone, wa, categories, website_listed, website_listed_class, raw ${FROM} ${where}${extra} order by followers desc limit :limit`, { ...params, limit: o.limit });
 }
 // Same selection, counts only (for the cost estimate).
