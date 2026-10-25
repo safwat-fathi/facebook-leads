@@ -33,6 +33,17 @@ describe('sendEmail', () => {
     expect(stage(id)).toBe('contacted');
     expect(outreachState(id).log).toMatchObject([{ channel: 'email', status: 'sent' }]);
   });
+  it('tags the channel used, keeping channels the person ticked by hand', async () => {
+    savePage(id, { stage: 'contacted', contacted_via: ['other', 'facebook'] });
+    await sendEmail(id, msg, deps());
+    expect((getDb().prepare('select contacted_via v from pages where fb_page_id = ?').get(id) as { v: string }).v).toBe('facebook,email,other');
+  });
+  it('saves contacted_via in a fixed order, clears it with an empty list and rejects unknown channels', () => {
+    const via = () => (getDb().prepare('select contacted_via v from pages where fb_page_id = ?').get(id) as { v: string | null }).v;
+    savePage(id, { contacted_via: ['email', 'facebook', 'email'] }); expect(via()).toBe('facebook,email');
+    savePage(id, { contacted_via: [] }); expect(via()).toBeNull();
+    expect(() => savePage(id, { contacted_via: ['carrier pigeon'] })).toThrow();
+  });
   it('refuses a second email to the same address', async () => {
     const d = deps(); await sendEmail(id, msg, d);
     await expect(sendEmail(id, msg, d)).rejects.toThrow(/Already emailed/);

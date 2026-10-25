@@ -9,7 +9,7 @@ import { bad, HttpError } from './errors';
 import { budgetStatus } from './jobs';
 import { openRouterLlm, type LlmPort } from './llm';
 import { pageDetail, type PageDetail } from './pages';
-import { PITCH_LABEL } from './present';
+import { CONTACT_CHANNELS, PITCH_LABEL } from './present';
 
 export type OutreachDeps = { llm?: LlmPort; mail?: MailPort; dailyCap: number };
 export function defaultOutreachDeps(): OutreachDeps {
@@ -127,7 +127,7 @@ export async function sendEmail(id: string, input: unknown, deps: OutreachDeps =
     throw new HttpError(502, 'The email was not sent. Check the sender is verified in Brevo.');
   }
   getDb().prepare('update pages set draft_subject = null, draft_body = null where fb_page_id = :id').run({ id });
-  markContacted(id);
+  markContacted(id, 'email');
   return { status: 'sent' };
 }
 
@@ -139,9 +139,15 @@ export function whatsappLink(id: string, input: unknown): { url: string } {
   const digits = (d.whatsapp ?? '').replace(/\D/g, '');
   if (!digits) throw bad('This page has no WhatsApp number.');
   getDb().prepare("insert into outreach_log (fb_page_id, channel, to_address, body, status, created_at) values (:id, 'whatsapp', :to, :body, 'opened', :at)").run({ id, to: digits, body: r.data.body, at: nowIso() });
-  markContacted(id);
+  markContacted(id, 'whatsapp');
   return { url: `https://wa.me/${digits}?text=${encodeURIComponent(r.data.body)}` };
 }
 
-// Moves a fresh lead to "contacted"; never downgrades one that already replied or converted.
-const markContacted = (id: string) => getDb().prepare("update pages set stage = 'contacted' where fb_page_id = :id and stage in ('new', 'reviewed', 'qualified')").run({ id });
+// Moves a fresh lead to "contacted" (never downgrades one that already replied or converted) and tags the channel used.
+function markContacted(id: string, channel: (typeof CONTACT_CHANNELS)[number]) {
+  const db = getDb();
+  db.prepare("update pages set stage = 'contacted' where fb_page_id = :id and stage in ('new', 'reviewed', 'qualified')").run({ id });
+  const have = (db.prepare('select contacted_via v from pages where fb_page_id = :id').get({ id }) as { v: string | null } | undefined)?.v?.split(',') ?? [];
+  const via = CONTACT_CHANNELS.filter((c) => c === channel || have.includes(c)).join(',');
+  db.prepare('update pages set contacted_via = :via where fb_page_id = :id').run({ id, via });
+}

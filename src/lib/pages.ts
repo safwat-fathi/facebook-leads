@@ -5,6 +5,7 @@ import { getDb } from './db';
 import { buildWhere, STAGES, VERDICTS, type Filters } from './filters';
 import { domainOf, HAS_WEBSITE, PLATFORMS, REVIEW_WEBSITE, type Platform, type WebsiteStatus } from './parse';
 import { bad, HttpError } from './errors';
+import { CONTACT_CHANNELS } from './present';
 import type { PageRow } from './ingest';
 import type { AdSignals, PostSignals } from './signals';
 import { fitSort, matchesPitch, scorePage, type Pitch, type Score, type ScoreInput } from './score';
@@ -56,6 +57,7 @@ const ManualWebsite = z.object({ url: z.string().trim().min(1).max(300), platfor
 const Update = z.object({
   stage: z.enum(STAGES).optional(),
   verdict: z.enum(VERDICTS).nullable().optional(),
+  contacted_via: z.array(z.enum(CONTACT_CHANNELS)).transform((a) => CONTACT_CHANNELS.filter((c) => a.includes(c)).join(',') || null).optional(), // stored as a comma list in a fixed order
   notes: z.string().max(5000, 'notes must be at most 5000 characters').optional(),
   draft_subject: z.string().max(150).nullable().optional(),
   draft_body: z.string().max(5000).nullable().optional(),
@@ -123,7 +125,7 @@ export type PageDetail = {
   fb_page_id: string; url: string; title: string | null; categories: string | null; category: string | null; business_type: string | null; followers: number;
   country: string | null; city: string | null; district: string | null; location_source: string | null;
   phone: string | null; email: string | null; whatsapp: string | null; whatsapp_source: string | null; ad_running: number;
-  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; store_platform: Platform | null; draft_subject: string | null; draft_body: string | null; website_checked_at: string | null; agent_cost_usd: number | null;
+  website_listed_class: string | null; website_url: string | null; website_domain: string | null; website_status: WebsiteStatus | null; store_platform: Platform | null; draft_subject: string | null; draft_body: string | null; contacted_via: string | null; website_checked_at: string | null; agent_cost_usd: number | null;
   stage: string; notes: string | null; verdict: string | null; discovered_by: string | null; first_seen: string | null; last_seen: string | null;
   wa: string[]; website_listed: { url: string; cls: string }[]; website_evidence: Record<string, unknown> | null;
   intro: string | null; address: string | null; ad_status: string | null; creation_date: string | null;

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BASIS, PITCH_LABEL, PLATFORM_LABEL, STAGE_LABEL, pitchTone, safeUrl, usd, webInfo } from '@/lib/present';
+import { BASIS, CHANNEL_LABEL, CONTACT_CHANNELS, PITCH_LABEL, PLATFORM_LABEL, STAGE_LABEL, pitchTone, safeUrl, usd, webInfo } from '@/lib/present';
 import { THRESHOLD, type Reason } from '@/lib/score';
 import type { PageDetail } from '@/lib/pages';
 import type { OutreachState } from '@/lib/outreach';
@@ -142,6 +142,18 @@ export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: s
             {Object.entries(STAGE_LABEL).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
           </select>
         </div>
+        {d.stage === 'contacted' && (() => {
+          const via = (d.contacted_via ?? '').split(',').filter(Boolean);
+          return (
+            <div className="review-row">
+              <span id="d-via">Contacted on</span>
+              {CONTACT_CHANNELS.map((c) => (
+                <button key={c} type="button" className="quiet" aria-pressed={via.includes(c)}
+                  onClick={() => save({ contacted_via: via.includes(c) ? via.filter((v) => v !== c) : [...via, c] })}>{CHANNEL_LABEL[c]}</button>
+              ))}
+            </div>
+          );
+        })()}
         <div className="review-row">
           <span>Real Egyptian seller?</span>
           <button type="button" className="quiet" aria-pressed={d.verdict === 'seller_yes'} onClick={() => save({ verdict: d.verdict === 'seller_yes' ? null : 'seller_yes' })}>Yes</button>
