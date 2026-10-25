@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetEnvForTests } from '@/lib/env';
 import { openDb, useDbForTests, getDb } from '@/lib/db';
 import { recordToRow } from '@/lib/ingest';
-import { draftMessage, outreachState, sendEmail, setDoNotContact, whatsappLink, type OutreachDeps } from '@/lib/outreach';
-import { savePage, upsertPage } from '@/lib/pages';
+import { cleanSubject, defaultOutreachDeps, draftMessage, outreachState, sendEmail, setDoNotContact, whatsappLink, type OutreachDeps } from '@/lib/outreach';
+import { pageDetail, savePage, saveSignals, upsertPage } from '@/lib/pages';
 import type { MailPort } from '@/lib/brevo';
 import type { LlmPort } from '@/lib/llm';
 import { RECORDS } from './fixtures/records';
@@ -99,6 +99,22 @@ describe('whatsappLink', () => {
   });
 });
 
+describe('defaultOutreachDeps', () => {
+  const modelUsed = async () => {
+    const fetchMock = vi.fn(async () => Response.json({ choices: [{ message: { role: 'assistant', content: 'x' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    await defaultOutreachDeps().llm!.chat([], []);
+    vi.unstubAllGlobals();
+    return JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).model;
+  };
+  it('drafts with DRAFT_MODEL when set, otherwise with AGENT_MODEL', async () => {
+    vi.stubEnv('OPENROUTER_API_KEY', 'k'); vi.stubEnv('AGENT_MODEL', 'agent/model'); vi.stubEnv('DRAFT_MODEL', ''); resetEnvForTests();
+    expect(await modelUsed()).toBe('agent/model');
+    vi.stubEnv('DRAFT_MODEL', 'draft/model'); resetEnvForTests();
+    expect(await modelUsed()).toBe('draft/model');
+  });
+});
+
 describe('draftMessage', () => {
   it('splits subject and body and records the cost in the ledger', async () => {
     const out = await draftMessage(id, deps({ llm: llm('الموضوع: متجر خاص بكم\n\nأهلاً، عندنا فكرة لمتجركم.') }));
@@ -124,6 +140,30 @@ describe('draftMessage', () => {
     await draftMessage(id, deps({ llm: port }));
     const sent = JSON.parse((vi.mocked(port.chat).mock.calls[0][0][1].content as string));
     expect(sent.page).toMatchObject({ website: 'shop.example.com', store_platform: 'salla', my_notes: 'met at the fair' });
+  });
+  it('tells the model whether the page is an established brand (10K+ followers) or small', async () => {
+    const sizeFor = async (followers: number) => {
+      getDb().prepare('update pages set followers = ? where fb_page_id = ?').run(followers, id);
+      const port = llm('s\n\nb');
+      await draftMessage(id, deps({ llm: port }));
+      const [system, user] = vi.mocked(port.chat).mock.calls[0][0];
+      expect(system.content).toContain('"established"');
+      return JSON.parse(user.content as string).page.size;
+    };
+    expect(await sizeFor(15_000)).toBe('established');
+    expect(await sizeFor(10_000)).toBe('established');
+    expect(await sizeFor(3_000)).toBe('small');
+  });
+  it('strips subject labels the model adds, and leaves a plain subject alone', () => {
+    for (const [line, want] of [['Subject: أتمتة الطلبات', 'أتمتة الطلبات'], ['الموضوع: أتمتة الطلبات', 'أتمتة الطلبات'], ['موضوع الإيميل: أتمتة الطلبات', 'أتمتة الطلبات'], ['تفعيل: الموضوع: أتمتة الطلبات', 'أتمتة الطلبات'], ['فكرة: لتنظيم الطلبات', 'فكرة: لتنظيم الطلبات'], ['فكرة لمتجر iDO', 'فكرة لمتجر iDO']]) expect(cleanSubject(line)).toBe(want);
+  });
+  it('does not draft for a page that scores below the bar for both services', async () => {
+    saveSignals(id, { posts: { posts_fetched: 3, posts_30d: 0, last_post_at: null, inbox_posts: 0, cod_posts: 0, shop_link_posts: 0, price_posts: 0, comments_total: 0, post_phones: [], quotes: [] }, ads: null, adsChecked: true, cost: 0 });
+    getDb().prepare("update pages set website_status = 'confirmed_manual', website_domain = 'shop.example.com' where fb_page_id = ?").run(id);
+    expect(pageDetail(id)!.score).toMatchObject({ pitch: 'skip', blocked: null });
+    const port = llm('s\n\nb');
+    await expect(draftMessage(id, deps({ llm: port }))).rejects.toThrow(/below the bar/);
+    expect(port.chat).not.toHaveBeenCalled();
   });
   it('refuses an unusable model answer and works only when a model is configured', async () => {
     await expect(draftMessage(id, deps({ llm: llm('just one line') }))).rejects.toThrow(/usable draft/);

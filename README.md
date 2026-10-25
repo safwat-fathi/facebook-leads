@@ -36,7 +36,8 @@ pnpm dev                       # http://localhost:3000, sign in with the key
 | `BREVO_API_KEY` | for email | Sends outreach email through Brevo. Empty disables sending. |
 | `OUTREACH_FROM_EMAIL` / `OUTREACH_FROM_NAME` | no | Sender, default `hello@tijaratk.com` / `Tijaratk`. The address must be a verified sender in Brevo. |
 | `OUTREACH_DAILY_CAP` | no | Emails allowed in any 24 hours. Default 20. |
-| `AGENT_MODEL` | no | Default `anthropic/claude-haiku-5.5`. |
+| `AGENT_MODEL` | no | Model for the website-check agent. Default `anthropic/claude-haiku-5.5`. |
+| `DRAFT_MODEL` | no | Model that writes outreach drafts. Defaults to `AGENT_MODEL`. |
 | `MAX_JOB_USD` | no | Largest budget one job may have. Default 3. |
 | `DAILY_BUDGET_USD` | no | Total across jobs in any rolling 24 h. Default 10. |
 | `DATA_DIR` | no | Where `leads.db` lives. Default `./data`. |

@@ -14,7 +14,8 @@ const Env = z.object({
   OUTREACH_FROM_EMAIL: z.email().default('hello@tijaratk.com'), // must be a verified sender in Brevo
   OUTREACH_FROM_NAME: z.string().min(1).default('Tijaratk'),
   OUTREACH_DAILY_CAP: z.coerce.number().int().positive().default(20), // emails per 24 hours
-  AGENT_MODEL: z.string().min(1).default('anthropic/claude-haiku-5.5'),
+  AGENT_MODEL: z.string().min(1).default('anthropic/claude-haiku-5.5'), // the website-check agent: needs good tool calling
+  DRAFT_MODEL: optional, // writes the outreach drafts (no tools); falls back to AGENT_MODEL
   DATA_DIR: z.string().min(1).default('./data'),
   MAX_JOB_USD: z.coerce.number().positive().default(3),
   DAILY_BUDGET_USD: z.coerce.number().positive().default(10),
