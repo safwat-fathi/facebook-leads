@@ -86,6 +86,9 @@ Open a page and use **Contact**: *Draft message* asks the model (OpenRouter, abo
 - **I confirmed this page's website myself** (Website section of the drawer): enter the address and, if you know it, the platform. It counts as having a website, shows as "confirmed by you", and Check websites never changes it. *Reset to not checked* removes it.
 - Platform detection: the website check also records Shopify, Salla, Zid or WooCommerce when it can see them. A detected store lowers the web-shop score; existing pages get it the next time they are re-checked.
 
+### Costs
+The **Costs** tab keeps the record of paid calls: totals per provider (Apify, model) for 24 hours, 7 days, 30 days and all time, a per-day table, spend by kind of work (finding pages, enrich, check websites, message drafts), and every single charge with its job and a CSV download. Dates are UTC. Amounts are what Apify and OpenRouter reported when each call finished; a server restart mid-job leaves the Apify charge of the aborted runs out, so check the Apify console after one. Emails are only counted, not priced.
+
 ### Jobs
 One job runs at a time. After each Apify run the app waits (about 8 to 10 seconds, up to 30) for Apify to settle the charge, because the figure it reports right after a run ends is too low; budgets and the daily limit use the settled figure. A run that fails or is cancelled is charged too. Progress updates live; **Cancel** stops a running job and its Apify run. If the server restarts mid-job, the job is marked failed and its runs are aborted.
 

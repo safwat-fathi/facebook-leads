@@ -17,9 +17,11 @@ Where things are: the app is this folder (Next.js, SQLite, API-key login); the e
 | 1b | Scoring: shop score, WhatsApp score, pitch, reasons, Fit sort and filter | Built 2026-10-24. **Weights are guesses** |
 | 2 | Assisted outreach: drafts, daily caps, sent log, do-not-contact list | Built 2026-10-25: LLM drafts, Brevo email from hello@tijaratk.com, WhatsApp link, do-not-contact, daily cap, sent log. **Legal gate not cleared by counsel**; sending is the owner's decision (Law 151/2020). Not yet used for real sends |
 | 1c | Store-platform detection (Shopify, Salla, Zid, WooCommerce) in the website check, filter and score | Built 2026-10-25. Existing pages need a re-check to get it |
+| 1d | Costs page: totals by provider and day, spend by kind of work, every charge, CSV | Built 2026-10-25 |
+| 1e | Dashboard polish: page-size control with item/page counts, manual "I confirmed the website" (never re-checked), drafts saved on the page, platform shown as "None detected" | Built 2026-10-25 |
 | 3 | Learn from replies; cold email automation; Click-to-WhatsApp ads | Only if Phase 2 gets replies |
 
-Data today: 30 pages, 9 enriched, 9 scored with a pitch.
+Data in the local database on 2026-10-25: 76 pages, 9 enriched, 17 with a website result. The server's database may differ.
 
 ## Next, in order
 
