@@ -5,7 +5,7 @@ Direct host deployment, no Docker: the Next.js app runs under **pm2** (the same 
 ## Before you start
 - A VPS with Node.js 22.19+, pnpm, pm2, nginx and certbot (the now-focus box already has them; check with `node -v`, since `node:sqlite` needs 22.19+).
 - Ports 22/80/443 open. Port 3100 stays closed to the outside.
-- DNS: `fbleads.tijaratk.com` is an **A record in Cloudflare** pointing at the VPS (75.119.144.29), proxied (orange cloud). After certbot runs, set Cloudflare SSL/TLS mode to **Full** (not Flexible, which causes a redirect loop). Cloudflare only proxies HTTP(S): SSH and `DEPLOY_HOST` must use the VPS IP, never `fbleads.tijaratk.com`. nginx needs real-client-IP handling for Cloudflare (see the comment in `deploy/leads.conf`).
+- DNS: `fbleads.tijaratk.com` is an **A record in Cloudflare** pointing at the VPS (keep its IP out of the repo: the origin IP lets anyone bypass Cloudflare), proxied (orange cloud). After certbot runs, set Cloudflare SSL/TLS mode to **Full** (not Flexible, which causes a redirect loop). Cloudflare only proxies HTTP(S): SSH and `DEPLOY_HOST` must use the VPS IP, never `fbleads.tijaratk.com`. nginx needs real-client-IP handling for Cloudflare (see the comment in `deploy/leads.conf`).
 
 ## First deploy
 ```sh
@@ -50,6 +50,8 @@ DATA_DIR=./data node scripts/backup.mjs ./export          # writes ./export/lead
 ssh safwat@server mkdir -p /home/safwat/facebook-leads/data
 scp ./export/leads-*.db safwat@server:/home/safwat/facebook-leads/data/leads.db
 ```
+Or in one step: `DEPLOY_HOST=<vps ip or ssh alias> DEPLOY_USER=<user> pnpm run push-db` (optional `DEPLOY_DIR`, default `/home/safwat/facebook-leads`; snapshots, stops the app, swaps the file, restarts; the old VPS file is kept as `leads.db.bak`).
+
 Run it before the first `pm2 start`, as the same user that runs pm2, so the file is writable by the app.
 
 ## Backups

@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "gen-key": "node scripts/gen-key.mjs",
     "backup": "node scripts/backup.mjs",
+    "push-db": "bash scripts/push-db.sh",
     "postbuild": "node scripts/copy-static.mjs",
     "check:server": "node scripts/check-server.mjs"
   },
