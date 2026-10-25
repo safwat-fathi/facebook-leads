@@ -9,7 +9,7 @@ import { outreachState } from '@/lib/outreach';
 import { discoveryRuns } from '@/lib/jobs';
 import { searchLabel } from '@/lib/job-present';
 import { facets, pageDetail, queryPages, SORT_KEYS, stats } from '@/lib/pages';
-import { PITCH_LABEL, PLATFORM_LABEL, pitchTone, safeUrl, signalTags, STAGE_LABEL, webInfo } from '@/lib/present';
+import { CHANNEL_BADGE, CHANNEL_LABEL, PITCH_LABEL, PLATFORM_LABEL, pitchTone, safeUrl, signalTags, STAGE_LABEL, webInfo } from '@/lib/present';
 
 type SP = Record<string, string | string[] | undefined>;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -90,7 +90,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                         : <span className="tag">none</span>}
                     </td>
                     <td><span className={`state ${web.group}`}>{web.text}</span>{r.store_platform && <span className="tag"> {PLATFORM_LABEL[r.store_platform]}</span>}{r.website_domain && <span className="sub" dir="ltr">{(() => { const safe = r.website_url ? safeUrl(r.website_url) : null; return safe ? <a href={safe} target="_blank" rel="noopener noreferrer">{r.website_domain}</a> : r.website_domain; })()}</span>}</td>
-                    <td>{STAGE_LABEL[r.stage] ?? r.stage}</td>
+                    <td>{STAGE_LABEL[r.stage] ?? r.stage}{r.contacted_via && <span className="sub">{r.contacted_via.split(',').map((c) => <span key={c} className="pill" title={`Contacted on ${CHANNEL_LABEL[c] ?? c}`}>{CHANNEL_BADGE[c] ?? c}</span>)}</span>}</td>
                     <td>{(() => { const tags = signalTags(r); return tags === null ? <span className="tag">not enriched</span> : tags.length ? tags.map((t) => <span key={t.text} className={`pill ${t.tone}`}>{t.text}</span>) : <span className="tag">nothing notable</span>; })()}</td>
                     <td><VerdictButtons id={r.fb_page_id} verdict={r.verdict} title={r.title ?? ''} /></td>
                   </tr>

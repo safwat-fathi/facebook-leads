@@ -92,14 +92,14 @@ export function savePage(id: string, body: unknown) {
 export type ListRow = {
   fb_page_id: string; title: string | null; url: string; followers: number; city: string | null; country: string | null; location_source: string | null;
   business_type: string | null; category: string | null; whatsapp: string | null; whatsapp_source: string | null; phone: string | null;
-  website_listed_class: string | null; website_status: WebsiteStatus | null; website_url: string | null; website_domain: string | null; store_platform: Platform | null; stage: string; verdict: string | null;
+  website_listed_class: string | null; website_status: WebsiteStatus | null; website_url: string | null; website_domain: string | null; store_platform: Platform | null; stage: string; contacted_via: string | null; verdict: string | null;
   enriched_at: string | null; inbox_posts: number | null; cod_posts: number | null; shop_link_posts: number | null; posts_30d: number | null; ads_active: number | null; ads_message_cta: number | null;
   ad_running: number | null; last_post_at: string | null; posts_fetched: number | null; comments_total: number | null; ads_checked: number | null;
   shop_fit: number; wa_fit: number; pitch: Pitch | null;
 };
 const SORTS: Record<string, string> = { followers: 'followers', title: 'title collate nocase', city: 'city', website: 'website_status', stage: 'stage' };
 export const SORT_KEYS = [...Object.keys(SORTS), 'fit']; // 'fit' is sorted in memory (see queryPages)
-const LIST_COLS = 'fb_page_id, title, url, followers, city, country, location_source, business_type, category, whatsapp, whatsapp_source, phone, website_listed_class, website_status, website_url, website_domain, store_platform, stage, verdict, enriched_at, inbox_posts, cod_posts, shop_link_posts, posts_30d, ads_active, ads_message_cta, ad_running, last_post_at, posts_fetched, comments_total, ads_checked';
+const LIST_COLS = 'fb_page_id, title, url, followers, city, country, location_source, business_type, category, whatsapp, whatsapp_source, phone, website_listed_class, website_status, website_url, website_domain, store_platform, stage, contacted_via, verdict, enriched_at, inbox_posts, cod_posts, shop_link_posts, posts_30d, ads_active, ads_message_cta, ad_running, last_post_at, posts_fetched, comments_total, ads_checked';
 export type PageOpts = { sort?: string; dir?: string; limit?: number; offset?: number };
 type RawRow = Omit<ListRow, 'shop_fit' | 'wa_fit' | 'pitch'>;
 const withFit = (r: RawRow): { row: ListRow; score: Score } => { const score = scorePage(r); return { row: { ...r, shop_fit: score.shop, wa_fit: score.wa, pitch: score.pitch }, score }; };

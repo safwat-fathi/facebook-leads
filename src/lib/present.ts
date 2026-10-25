@@ -24,6 +24,7 @@ export const PLATFORM_LABEL: Record<string, string> = { shopify: 'Shopify', sall
 export const STAGE_LABEL: Record<string, string> = { new: 'New', reviewed: 'Reviewed', qualified: 'Qualified', contacted: 'Contacted', replied: 'Replied', converted: 'Converted', rejected: 'Rejected' };
 export const CONTACT_CHANNELS = ['facebook', 'whatsapp', 'email', 'other'] as const; // where a lead was reached, for the Contacted stage
 export const CHANNEL_LABEL: Record<string, string> = { facebook: 'Facebook', whatsapp: 'WhatsApp', email: 'Email', other: 'Other' };
+export const CHANNEL_BADGE: Record<string, string> = { facebook: 'FB', whatsapp: 'WA', email: 'Email', other: 'Other' };
 export const BASIS: Record<string, string> = {
   address: 'Egypt, read from the address on the page', area: "Egypt, read from the page's service area",
   phone: 'Egypt, only from a +20 phone number (no address on the page)', none: 'Location unknown',
