@@ -39,6 +39,8 @@ export const getJob = (id: number): JobDetail | null => { const r = q1<JobDetail
 export const spentLast24h = () => q1<{ s: number }>("select coalesce(sum(usd), 0) s from spend where at > :since", { since: new Date(Date.now() - 24 * 3600_000).toISOString() })!.s;
 // Money already promised to queued/running jobs but not spent yet.
 const committed = () => q1<{ s: number }>("select coalesce(sum(max(budget_usd - spent_usd, 0)), 0) s from jobs where status in ('queued', 'running')")!.s;
+/** Jobs waiting or running; the nav shows a pulse while this is above zero. */
+export const activeJobCount = () => q1<{ n: number }>("select count(*) n from jobs where status in ('queued', 'running')")!.n;
 export const budgetStatus = () => { const env = getEnv(); const spent = spentLast24h(); return { spent24h: spent, dailyLimit: env.DAILY_BUDGET_USD, maxJob: env.MAX_JOB_USD, available: Math.max(0, env.DAILY_BUDGET_USD - spent - committed()) }; };
 
 // ---- estimates and creation ----

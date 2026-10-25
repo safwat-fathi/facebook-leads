@@ -4,7 +4,7 @@ import { resetEnvForTests } from '@/lib/env';
 import { HttpError } from '@/lib/errors';
 import { recordToRow } from '@/lib/ingest';
 import { parseFilters } from '@/lib/filters';
-import { budgetStatus, cancelJob, createJob, estimate, getJob, listJobs, processNext, recoverInterrupted, type JobDeps } from '@/lib/jobs';
+import { activeJobCount, budgetStatus, cancelJob, createJob, estimate, getJob, listJobs, processNext, recoverInterrupted, type JobDeps } from '@/lib/jobs';
 import type { ApifyPort, RunResult } from '@/lib/apify';
 import type { ChatMsg, LlmPort, ToolCall } from '@/lib/llm';
 import { pageDetail, queryPages, stats, upsertPage } from '@/lib/pages';
@@ -83,6 +83,18 @@ describe('estimates', () => {
     const e = estimate(websiteCheck());
     expect(e.detail).toMatchObject({ total: 4, listed: 2, needAgent: 2 });
     expect(e.usd).toBeCloseTo(2 * 0.025, 6);
+  });
+});
+
+describe('activeJobCount', () => {
+  it('counts waiting and running jobs and ignores finished ones', () => {
+    expect(activeJobCount()).toBe(0);
+    const { id } = createJob(discover({}, 1)) as { id: number };
+    expect(activeJobCount()).toBe(1);
+    getDb().prepare("update jobs set status = 'running' where id = ?").run(id);
+    expect(activeJobCount()).toBe(1);
+    getDb().prepare("update jobs set status = 'done' where id = ?").run(id);
+    expect(activeJobCount()).toBe(0);
   });
 });
 
