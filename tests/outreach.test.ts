@@ -154,6 +154,18 @@ describe('draftMessage', () => {
     expect(await sizeFor(10_000)).toBe('established');
     expect(await sizeFor(3_000)).toBe('small');
   });
+  it('shows the model earlier messages that got a reply, without the opt-out footer, and nothing when there are none', async () => {
+    const userFor = async () => { const port = llm('s\n\nb'); await draftMessage(id, deps({ llm: port })); return JSON.parse(vi.mocked(port.chat).mock.calls[0][0][1].content as string); };
+    expect(await userFor()).not.toHaveProperty('examples');
+    const other = (getDb().prepare('select fb_page_id from pages where fb_page_id != ? limit 1').get(id) as { fb_page_id: string }).fb_page_id;
+    getDb().prepare("update pages set email = 'owner@other.example' where fb_page_id = ?").run(other);
+    await sendEmail(other, { subject: 'موضوع ناجح', body: 'رسالة ناجحة' }, deps());
+    getDb().prepare("update pages set stage = 'contacted' where fb_page_id = ?").run(other);
+    expect(await userFor()).not.toHaveProperty('examples');
+    getDb().prepare("update pages set stage = 'replied' where fb_page_id = ?").run(other);
+    const { examples } = await userFor();
+    expect(examples).toEqual([{ subject: 'موضوع ناجح', body: 'رسالة ناجحة' }]);
+  });
   it('strips subject labels the model adds, and leaves a plain subject alone', () => {
     for (const [line, want] of [['Subject: أتمتة الطلبات', 'أتمتة الطلبات'], ['الموضوع: أتمتة الطلبات', 'أتمتة الطلبات'], ['موضوع الإيميل: أتمتة الطلبات', 'أتمتة الطلبات'], ['تفعيل: الموضوع: أتمتة الطلبات', 'أتمتة الطلبات'], ['فكرة: لتنظيم الطلبات', 'فكرة: لتنظيم الطلبات'], ['فكرة لمتجر iDO', 'فكرة لمتجر iDO']]) expect(cleanSubject(line)).toBe(want);
   });
