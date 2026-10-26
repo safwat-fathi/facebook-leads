@@ -45,8 +45,13 @@ create index if not exists outreach_at on outreach_log(created_at);
 create index if not exists spend_at on spend(at);
 create index if not exists jobs_status on jobs(status);
 `;
-// Columns added after the first release of `pages`: bring older databases (like the one from probe/) up to date in place.
-const LATE_COLUMNS: [string, string][] = [['category', 'text'], ['business_type', 'text'], ['whatsapp', 'text'], ['whatsapp_source', 'text'], ['stage', "text not null default 'new'"], ['notes', 'text'], ['verdict', 'text'], ['store_platform', 'text'], ['draft_subject', 'text'], ['draft_body', 'text'], ['contacted_via', 'text']];
+// Columns added after the first release of a table: bring older databases (like the one from probe/) up to date in place.
+// `create table if not exists` never adds a column to a table that already exists, so every late column is listed here.
+const LATE_COLUMNS: [table: string, column: string, definition: string][] = [
+  ['pages', 'category', 'text'], ['pages', 'business_type', 'text'], ['pages', 'whatsapp', 'text'], ['pages', 'whatsapp_source', 'text'], ['pages', 'stage', "text not null default 'new'"],
+  ['pages', 'notes', 'text'], ['pages', 'verdict', 'text'], ['pages', 'store_platform', 'text'], ['pages', 'draft_subject', 'text'], ['pages', 'draft_body', 'text'], ['pages', 'contacted_via', 'text'],
+  ['jobs', 'label', 'text'], // the name you give a Find-pages search
+];
 
 // Early databases limited jobs.kind with a CHECK constraint, which SQLite cannot alter: rebuild the table (the documented procedure:
 // foreign keys off, copy, drop, rename) so new job kinds are accepted. Rows and ids are preserved.
@@ -66,8 +71,9 @@ export function openDb(path: string): DatabaseSync {
   db.exec('pragma journal_mode = WAL; pragma busy_timeout = 5000; pragma foreign_keys = on;');
   relaxJobKind(db); // before SCHEMA: an old jobs table must be rebuilt first
   db.exec(SCHEMA);
-  const have = new Set((db.prepare('pragma table_info(pages)').all() as { name: string }[]).map((c) => c.name));
-  for (const [col, def] of LATE_COLUMNS) if (!have.has(col)) db.exec(`alter table pages add column ${col} ${def}`);
+  for (const [table, col, def] of LATE_COLUMNS) {
+    if (!(db.prepare(`pragma table_info(${table})`).all() as { name: string }[]).some((c) => c.name === col)) db.exec(`alter table ${table} add column ${col} ${def}`);
+  }
   return db;
 }
 

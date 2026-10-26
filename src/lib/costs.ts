@@ -36,10 +36,10 @@ export function costByWork(): WorkCost[] {
     from spend s left join jobs j on j.id = s.job_id group by work order by apify + openrouter desc`);
 }
 
-export type SpendRow = { id: number; at: string; provider: Provider; usd: number; note: string | null; job_id: number | null; kind: string | null };
+export type SpendRow = { id: number; at: string; provider: Provider; usd: number; note: string | null; job_id: number | null; kind: string | null; label: string | null; params: string | null };
 export function listSpend(o: { limit: number; offset: number }): { total: number; rows: SpendRow[] } {
   const total = q<{ n: number }>('select count(*) n from spend')[0].n;
-  const rows = q<SpendRow>('select s.id, s.at, s.provider, s.usd, s.note, s.job_id, j.kind from spend s left join jobs j on j.id = s.job_id order by s.id desc limit :limit offset :offset', o);
+  const rows = q<SpendRow>('select s.id, s.at, s.provider, s.usd, s.note, s.job_id, j.kind, j.label, j.params from spend s left join jobs j on j.id = s.job_id order by s.id desc limit :limit offset :offset', o);
   return { total, rows };
 }
 

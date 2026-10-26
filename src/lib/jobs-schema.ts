@@ -29,8 +29,10 @@ export type DiscoverParams = z.infer<typeof DiscoverParams>;
 export type CheckParams = z.infer<typeof CheckParams>;
 
 const budget = z.coerce.number().min(0.01, 'budget must be at least $0.01').max(1000).optional();
+const label = z.string().trim().max(60, 'label must be at most 60 characters');
+export const SetLabel = z.object({ label }).strict(); // blank clears it
 export const CreateJob = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('discover'), params: DiscoverParams, budgetUsd: budget }).strict(),
+  z.object({ kind: z.literal('discover'), params: DiscoverParams, budgetUsd: budget, label: label.optional() }).strict(),
   z.object({ kind: z.literal('website_check'), params: CheckParams, budgetUsd: budget }).strict(),
   z.object({ kind: z.literal('enrich'), params: EnrichParams, budgetUsd: budget }).strict(),
 ]);

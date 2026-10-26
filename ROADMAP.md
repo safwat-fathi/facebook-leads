@@ -1,7 +1,7 @@
 # Roadmap and progress
 
 Goal: find Egyptian Facebook pages that sell online, see which have no real shop or WhatsApp automation, and (later) contact them.
-Services pitched: **web shop** and **WhatsApp automation**. Outreach is **assisted** (the app drafts, a human sends). Last updated 2026-10-25.
+Services pitched: **web shop** and **WhatsApp automation**. Outreach is **assisted** (the app drafts, a human sends). Last updated 2026-10-26.
 
 Where things are: the app is this folder (Next.js, SQLite, API-key login); the earlier `probe/` command-line version was deleted on 2026-10-24. How to use the app: `README.md`. Deploying: `DEPLOY.md`. The long original plan, with the evaluation of the first ChatGPT plan, is `~/.claude/plans/i-want-to-build-snuggly-blossom.md`.
 
@@ -19,6 +19,7 @@ Where things are: the app is this folder (Next.js, SQLite, API-key login); the e
 | 1c | Store-platform detection (Shopify, Salla, Zid, WooCommerce) in the website check, filter and score | Built 2026-10-25. Existing pages need a re-check to get it |
 | 1d | Costs page: totals by provider and day, spend by kind of work, every charge, CSV | Built 2026-10-25 |
 | 1e | Dashboard polish: page-size control with item/page counts, manual "I confirmed the website" (never re-checked), drafts saved on the page, platform shown as "None detected" | Built 2026-10-25 |
+| 1f | Searches and a redesign: Searches page with your own labels, what each search produced (pages, enriched, websites checked) and its cost (exact for the search, approximate for checks and enrichment); Jobs say what they applied to; Label filter on Leads; sidebar layout, new look, phone layout | Built 2026-10-26. Locally verified on seeded data and a production build; not yet deployed |
 | 3 | Learn from replies; cold email automation; Click-to-WhatsApp ads | Only if Phase 2 gets replies |
 
 Data in the local database on 2026-10-25: 76 pages, 9 enriched, 17 with a website result. The server's database may differ.

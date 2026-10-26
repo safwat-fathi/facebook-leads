@@ -1,18 +1,18 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { STAGE_LABEL } from '@/lib/present';
 
 type Facets = { countries: { v: string; n: number }[]; cities: { v: string; n: number }[]; types: { v: string; n: number }[] };
-const FIELDS = ['q', 'min-followers', 'max-followers', 'country', 'city', 'type', 'whatsapp', 'website', 'platform', 'stage', 'verdict', 'job', 'enriched', 'signal', 'pitch'];
+const FIELDS = ['q', 'min-followers', 'max-followers', 'country', 'city', 'type', 'whatsapp', 'website', 'platform', 'stage', 'verdict', 'job', 'label', 'enriched', 'signal', 'pitch'];
 
 // Filters live in the URL. The inputs are uncontrolled; every change rewrites the query (debounced for typing) and keeps sort order.
-export function FilterBar({ facets, values, searches }: { facets: Facets; values: Record<string, string>; searches: { id: number; label: string }[] }) {
+export function FilterBar({ facets, values, searches, labels }: { facets: Facets; values: Record<string, string>; searches: { id: number; label: string }[]; labels: { label: string; searches: number }[] }) {
   const router = useRouter(), path = usePathname(), current = useSearchParams();
   const form = useRef<HTMLFormElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [open, setOpen] = useState(true);
-  useEffect(() => { if (matchMedia('(max-width: 720px)').matches) setOpen(false); }, []); // phones start with the table, filters one tap away
+  const [open, setOpen] = useState(false); // closed by default: the table is the page, and the badge says how many filters are on
+  const active = FIELDS.filter((k) => values[k]).length;
 
   function apply() {
     const f = form.current; if (!f) return;
@@ -36,10 +36,12 @@ export function FilterBar({ facets, values, searches }: { facets: Facets; values
   );
   return (
     <details className="filter-box" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary>Filters</summary>
+      <summary>Filters{active > 0 && <span className="badge" aria-label={`${active} active`}>{active}</span>}</summary>
       <form ref={form} className="filters" role="search" aria-label="Filter leads" onSubmit={(e) => e.preventDefault()}
         onChange={(e) => { clearTimeout(timer.current); timer.current = setTimeout(apply, (e.target as HTMLElement).tagName === 'SELECT' ? 0 : 250); }}>
         <label className="wide">Page name <input type="search" name="q" autoComplete="off" defaultValue={values.q ?? ''} /></label>
+        {select('label', 'Label', labels.map((l) => [l.label, `${l.label} (${l.searches})`]))}
+        {select('job', 'Search', searches.map((s) => [String(s.id), s.label]))}
         <label>Followers from <input type="number" name="min-followers" min={0} inputMode="numeric" autoComplete="off" defaultValue={values['min-followers'] ?? ''} /></label>
         <label>Followers up to <input type="number" name="max-followers" min={0} inputMode="numeric" autoComplete="off" defaultValue={values['max-followers'] ?? ''} /></label>
         {select('country', 'Country', facets.countries.map((c) => [c.v, `${c.v} (${c.n})`]))}
@@ -48,7 +50,6 @@ export function FilterBar({ facets, values, searches }: { facets: Facets; values
         {select('whatsapp', 'WhatsApp', [['confirmed', 'Linked on the page'], ['any', 'Linked or mobile guess'], ['none', 'None']])}
         {select('website', 'Website', [['real', 'Has a website'], ['none', 'No website found'], ['review', 'Needs review'], ['unknown', 'Not checked yet']])}
         {select('platform', 'Store platform', [['shopify', 'Shopify'], ['salla', 'Salla'], ['zid', 'Zid'], ['woocommerce', 'WooCommerce'], ['none', 'Site, no store detected']])}
-        {select('job', 'Search', searches.map((s) => [String(s.id), s.label]))}
         {select('stage', 'Stage', Object.entries(STAGE_LABEL))}
         {select('verdict', 'Seller check', [['seller_yes', 'Marked real seller'], ['seller_no', 'Marked not a seller'], ['none', 'Not marked yet']])}
         {select('enriched', 'Posts and ads', [['yes', 'Enriched'], ['no', 'Not enriched yet']])}

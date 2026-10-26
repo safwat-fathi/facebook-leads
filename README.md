@@ -3,7 +3,7 @@
 A private web app for finding Egyptian Facebook pages that sell online, checking whether each has its own website, and tracking them as leads. One user, one shared API key, hosted on your own server.
 
 - **Leads**: filter, sort and review the pages you have (followers, location, business type, WhatsApp, website status, stage), add notes, mark real sellers, export CSV.
-- **Find new pages**: a search by keyword and city (Apify) that saves every page it finds.
+- **Searches**: find new pages by keyword and city (Apify). Every search you have run stays on the Searches page with a label you choose, what it found (pages, enriched, websites checked, no website found) and what it cost.
 - **Check websites**: for the pages in your current filter, checks the site Facebook lists (free) or asks an AI agent to search the web for one (Apify Google search + OpenRouter model).
 - **Enrich**: reads each page’s recent posts and ads and keeps simple signals (orders by message, cash on delivery, existing order link, posting frequency, ads with message buttons). These feed the **Fit** score.
 - **Fit**: two scores per page (web shop, WhatsApp automation) with the reasons behind every point, a pitch label, and a Fit filter and sort.
@@ -47,7 +47,7 @@ Secrets go in `.env`/`.env.local` only (both git-ignored), never in `.env.exampl
 ## Using it
 
 ### Leads
-Filters live in the URL, so any view can be bookmarked. The **Search** filter lists your earlier Find-pages searches (terms, city, date, pages found); it also includes pages a search found that you already had. Click a page name to open its details: how we know it is in Egypt, its WhatsApp number (*linked on the page* is reliable; *mobile guess* is just its listed mobile), the website evidence, and your stage, notes and ✓/✗ mark.
+Filters live in the URL, so any view can be bookmarked. The **Label** chips and the **Label** and **Search** filters limit the list to the pages of a labelled group of searches or of one search (a search's pages include ones it found again that you already had); a banner then shows what that search found and cost. The numbers at the top are shortcuts to the matching lists. Click a page name to open its details: how we know it is in Egypt, its WhatsApp number (*linked on the page* is reliable; *mobile guess* is just its listed mobile), the website evidence, and your stage, notes and ✓/✗ mark.
 
 **Website status meanings**
 
@@ -58,8 +58,10 @@ Filters live in the URL, so any view can be bookmarked. The **Search** filter li
 | Possible website, Website unreachable, Dead domain | No, review by hand. |
 | No website found | Searches found none. This is not proof it has none. |
 
-### Find new pages (Jobs)
-Enter one search term per line (presets add Arabic examples), pick up to 3 cities, results per search (5-40), and a budget. Cost is about `searches x (results x $0.012 + $0.001)`. Pages already in the database are updated, never duplicated or overwritten (your notes and stage are kept). Use **View pages found** on the job to see only that search's results.
+### Searches
+**+ New search**: enter one search term per line (presets add Arabic examples), pick up to 3 cities, results per search (5-40), and a budget. Cost is about `searches x (results x $0.012 + $0.001)`. Pages already in the database are updated, never duplicated or overwritten (your notes and stage are kept). The optional **Label** is your name for the search; give several searches the same label to group them, then filter by it on Leads and Searches. Left blank, the search is named after its terms and cities, and you can add or change a label later with the pencil. *Templates* are saved forms (terms, cities, limits) you can load into a new search; **Run again** on any past search loads its form too.
+
+Each search on the Searches page shows what it produced: pages found, how many are enriched, how many websites were checked, and how many have no website found. Its cost is the search itself (exact, from the spend ledger) plus checks and enrichment (approximate: added up from the per-page costs of the pages that search found first, so a page found by two searches is costed once, and a recheck replaces the earlier figure). **View pages**, **Enrich...** and **Check websites...** on a search act on that search's pages, and the jobs you start there are listed under it. Pages from the old command-line tool belong to no search.
 
 ### Check websites
 On the Leads page, **Check websites...** acts on the pages in your current filter that have no result yet, biggest first. Choose how many (1-50) and a budget. Listed sites cost nothing; each page that needs the agent costs about $0.025.
@@ -91,7 +93,7 @@ Open a page and use **Contact**: *Draft message* asks the model (OpenRouter, abo
 The **Costs** tab keeps the record of paid calls: totals per provider (Apify, model) for 24 hours, 7 days, 30 days and all time, a per-day table, spend by kind of work (finding pages, enrich, check websites, message drafts), and every single charge with its job and a CSV download. Dates are UTC. Amounts are what Apify and OpenRouter reported when each call finished; a server restart mid-job leaves the Apify charge of the aborted runs out, so check the Apify console after one. Emails are only counted, not priced.
 
 ### Jobs
-One job runs at a time. After each Apify run the app waits (about 8 to 10 seconds, up to 30) for Apify to settle the charge, because the figure it reports right after a run ends is too low; budgets and the daily limit use the settled figure. A run that fails or is cancelled is charged too. Progress updates live; **Cancel** stops a running job and its Apify run. If the server restarts mid-job, the job is marked failed and its runs are aborted.
+The Jobs page is the activity log: every Find, Check websites and Enrich run, each saying what it applied to (a search, a label, or the filters it ran with, in words). One job runs at a time. After each Apify run the app waits (about 8 to 10 seconds, up to 30) for Apify to settle the charge, because the figure it reports right after a run ends is too low; budgets and the daily limit use the settled figure. A run that fails or is cancelled is charged too. Progress updates live; **Cancel** stops a running job and its Apify run. If the server restarts mid-job, the job is marked failed and its runs are aborted.
 
 ## Security model
 - Login by API key; session is a signed `HttpOnly`, `SameSite=Strict` cookie (`__Host-` and `Secure` in production). Login attempts are throttled.
@@ -114,8 +116,8 @@ pnpm run backup                   # consistent copy of the database to data/back
 
 ### Layout
 ```
-src/app/          pages and API routes (login, leads, jobs)
-src/components/   client components (filters, drawer, job forms)
+src/app/          pages and API routes (login, leads, searches, jobs, costs)
+src/components/   components (sidebar, filters, drawer, search cards, job forms)
 src/lib/          parse.ts (record parsing), signals.ts (posts/ads to signals), filters.ts, pages.ts (queries), jobs.ts (queue, budgets, worker),
                   website-agent.ts, safe-fetch.ts (SSRF guard), auth.ts, apify.ts, llm.ts
 src/proxy.ts      redirect to login + CSP nonce

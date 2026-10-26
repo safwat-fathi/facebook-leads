@@ -11,17 +11,20 @@ import { openRouterLlm, type LlmPort } from './llm';
 import { recordToRow } from './ingest';
 import { countForCheck, countForEnrich, saveSignals, saveWebsite, selectForCheck, selectForEnrich, upsertPage } from './pages';
 import { adSignals, groupByPage, postSignals } from './signals';
+import { searchName, type JobTarget } from './job-present';
 import { classifyWebsite, listedStatus, type PageRef, type SiteCheck, type WebsiteStatus } from './parse';
 import { webInfo } from './present';
 import { checkSite } from './website-check';
 import { LLM_TURN_WORST_USD, pageRef, runAgent, SEARCH_WORST_USD, type Charger } from './website-agent';
-import { ADS_PER_PAGE, CreateJob, ENRICH_BATCH, enrichBatchCost, estimateCheck, estimateDiscover, estimateEnrich, POSTS_PER_PAGE, searchCost, suggestedBudget, type CheckParams, type DiscoverParams } from './jobs-schema';
+import { ADS_PER_PAGE, CreateJob, ENRICH_BATCH, enrichBatchCost, estimateCheck, estimateDiscover, estimateEnrich, POSTS_PER_PAGE, searchCost, SetLabel, suggestedBudget, type CheckParams, type DiscoverParams } from './jobs-schema';
 
 export type JobKind = 'discover' | 'website_check' | 'enrich';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 export type JobRow = {
   id: number; kind: JobKind; params: DiscoverParams | CheckParams; status: JobStatus; budget_usd: number; spent_usd: number;
   progress: string | null; error: string | null; cancel_requested: number; created_at: string; started_at: string | null; finished_at: string | null;
+  label: string | null; // a Find-pages search's name, written by the person
+  target: JobTarget | null; // for Check/Enrich: the search or label it was scoped to (null = just filters)
 };
 export type JobDetail = JobRow & { log: string };
 export type JobDeps = { apify?: ApifyPort; llm?: LlmPort; check: (url: string, page: PageRef, signal?: AbortSignal) => Promise<SiteCheck>; model?: string };
@@ -30,21 +33,69 @@ const db = () => getDb();
 const q = <T>(sql: string, p: Record<string, string | number | null> = {}) => db().prepare(sql).all(p).map((r) => ({ ...r })) as unknown as T[];
 const q1 = <T>(sql: string, p: Record<string, string | number | null> = {}) => { const r = db().prepare(sql).get(p); return (r ? { ...r } : undefined) as unknown as T | undefined; };
 const hydrate = <T extends { params: unknown }>(r: T): T => ({ ...r, params: JSON.parse(r.params as string) });
-const COLS = 'id, kind, params, status, budget_usd, spent_usd, progress, error, cancel_requested, created_at, started_at, finished_at';
+const COLS = 'id, kind, params, status, budget_usd, spent_usd, progress, error, cancel_requested, created_at, started_at, finished_at, label';
 const nowIso = () => new Date().toISOString();
 
 // ---- reads ----
-export const listJobs = (limit = 30): JobRow[] => q<JobRow>(`select ${COLS} from jobs order by id desc limit :limit`, { limit }).map(hydrate);
-export const getJob = (id: number): JobDetail | null => { const r = q1<JobDetail>(`select ${COLS}, log from jobs where id = :id`, { id }); return r ? hydrate(r) : null; };
+type Bare<T> = Omit<T, 'target'>;
+// A Check/Enrich job scoped by `job` points at a search: look the names up once for the whole list.
+function withTargets<T extends Bare<JobRow>>(rows: T[]): (T & { target: JobTarget | null })[] {
+  const scoped = (r: T) => (r.params as { filters?: { job?: number; label?: string } }).filters;
+  const ids = [...new Set(rows.filter((r) => r.kind !== 'discover').map((r) => scoped(r)?.job).filter((x): x is number => !!x))];
+  const names = new Map(ids.length ? q<{ id: number; label: string | null; params: string }>("select id, label, params from jobs where kind = 'discover' and id in (select value from json_each(:ids))", { ids: JSON.stringify(ids) }).map((s) => [s.id, searchName({ label: s.label, params: JSON.parse(s.params) })] as const) : []);
+  return rows.map((r) => {
+    const f = r.kind === 'discover' ? undefined : scoped(r);
+    const target: JobTarget | null = f?.job ? { kind: 'search', id: f.job, name: names.get(f.job) ?? `Search #${f.job}` } : f?.label ? { kind: 'label', name: f.label } : null;
+    return { ...r, target };
+  });
+}
+export const listJobs = (limit = 30): JobRow[] => withTargets(q<Bare<JobRow>>(`select ${COLS} from jobs order by id desc limit :limit`, { limit }).map(hydrate));
+export const getJob = (id: number): JobDetail | null => { const r = q1<Bare<JobDetail>>(`select ${COLS}, log from jobs where id = :id`, { id }); return r ? withTargets([hydrate(r)])[0] : null; };
 export const spentLast24h = () => q1<{ s: number }>("select coalesce(sum(usd), 0) s from spend where at > :since", { since: new Date(Date.now() - 24 * 3600_000).toISOString() })!.s;
 // Money already promised to queued/running jobs but not spent yet.
 const committed = () => q1<{ s: number }>("select coalesce(sum(max(budget_usd - spent_usd, 0)), 0) s from jobs where status in ('queued', 'running')")!.s;
-/** Finished or running Find-pages jobs, newest first, with how many pages each one found (including pages it already knew). */
-export function discoveryRuns(limit = 50): { id: number; params: DiscoverParams; created_at: string; found: number }[] {
-  return q<{ id: number; params: string; created_at: string }>("select id, params, created_at from jobs where kind = 'discover' and status != 'queued' order by id desc limit :limit", { limit }).map((j) => ({
-    id: j.id, params: JSON.parse(j.params) as DiscoverParams, created_at: j.created_at,
-    found: q1<{ n: number }>("select count(*) n from pages where instr(',' || discovered_by || ',', ',job:' || :id || ',') > 0", { id: String(j.id) })!.n, // a string: see the job filter in filters.ts
-  }));
+
+/** A Find-pages search with what it produced. `found` counts every page it returned, including ones another search had already found. */
+export type SearchRun = {
+  id: number; label: string | null; params: DiscoverParams; status: JobStatus; budget_usd: number; spent_usd: number; progress: string | null; error: string | null;
+  created_at: string; finished_at: string | null;
+  found: number; fresh: number; enriched: number; checked: number; noSite: number;
+  estimateUsd: number; // what the search was expected to cost, from its parameters
+  followUpUsd: number; // enrich + website-check spend on the pages this search found FIRST, so a shared page is costed once
+};
+/**
+ * Find-pages jobs of every status, newest first, each with its result counts and cost. One pass over the tagged pages: `discovered_by` is a
+ * comma list (`job:7,job:9`), the first tag is the search that found the page first. Pages from the old command-line tool carry no job tag.
+ */
+export function discoveryRuns(limit = 200): SearchRun[] {
+  const jobs = q<{ id: number; label: string | null; params: string; status: JobStatus; budget_usd: number; spent_usd: number; progress: string | null; error: string | null; created_at: string; finished_at: string | null }>(
+    "select id, label, params, status, budget_usd, spent_usd, progress, error, created_at, finished_at from jobs where kind = 'discover' order by id desc limit :limit", { limit });
+  const tally = new Map(jobs.map((j) => [j.id, { found: 0, fresh: 0, enriched: 0, checked: 0, noSite: 0, followUpUsd: 0 }]));
+  for (const p of q<{ d: string; enriched: number; ws: string | null; usd: number }>(
+    "select p.discovered_by d, s.fb_page_id is not null enriched, p.website_status ws, coalesce(p.agent_cost_usd, 0) + coalesce(s.cost_usd, 0) usd from pages p left join signals s using (fb_page_id) where p.discovered_by like '%job:%'")) {
+    const tags = p.d.split(',');
+    for (const t of tags) {
+      const s = t.startsWith('job:') ? tally.get(Number(t.slice(4))) : undefined;
+      if (!s) continue;
+      s.found++; s.enriched += p.enriched; if (p.ws) s.checked++; if (p.ws === 'none_found') s.noSite++;
+    }
+    const owner = tags[0].startsWith('job:') ? tally.get(Number(tags[0].slice(4))) : undefined;
+    if (owner) { owner.fresh++; owner.followUpUsd += p.usd; }
+  }
+  return jobs.map((j) => {
+    const params = JSON.parse(j.params) as DiscoverParams;
+    return { ...j, params, ...tally.get(j.id)!, estimateUsd: (params.terms?.length ?? 0) * (params.locations?.length ?? 0) * searchCost(params.perSearch ?? 0) };
+  });
+}
+/** Pages no search found: they came from the old command-line tool, so they appear on no search. */
+export const pagesWithoutSearch = () => q1<{ n: number }>("select count(*) n from pages where discovered_by is null or discovered_by not like '%job:%'")!.n;
+/** The labels you have used, with how many searches carry each (matched case-insensitively). */
+export const labels = () => q<{ label: string; searches: number }>("select min(label) label, count(*) searches from jobs where kind = 'discover' and label is not null group by lower(label) order by lower(label)");
+export function setLabel(id: number, input: unknown): JobRow {
+  const r = SetLabel.safeParse(input);
+  if (!r.success) throw bad(r.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`).join('; '));
+  if (!db().prepare("update jobs set label = :label where id = :id and kind = 'discover'").run({ id, label: r.data.label || null }).changes) throw new HttpError(404, 'no such search');
+  return getJob(id)!;
 }
 /** Jobs waiting or running; the nav shows a pulse while this is above zero. */
 export const activeJobCount = () => q1<{ n: number }>("select count(*) n from jobs where status in ('queued', 'running')")!.n;
@@ -82,8 +133,8 @@ export function createJob(input: unknown, deps?: { kick?: () => void }): JobRow 
   const b = budgetStatus();
   if (budgetUsd > b.available) throw bad(`Daily budget: $${b.spent24h.toFixed(2)} spent in the last 24 h of $${b.dailyLimit} (DAILY_BUDGET_USD), $${b.available.toFixed(2)} available.`);
   if ((q1<{ n: number }>("select count(*) n from jobs where status = 'queued'")!.n) >= 10) throw bad('Too many jobs are waiting. Let some finish or cancel one.');
-  const res = db().prepare("insert into jobs (kind, params, budget_usd, log, created_at) values (:kind, :params, :budget, :log, :at)")
-    .run({ kind: job.kind, params: JSON.stringify(job.params), budget: budgetUsd, log: `${nowIso().slice(11, 19)} queued (budget $${budgetUsd.toFixed(2)}, estimate $${est.usd.toFixed(2)})\n`, at: nowIso() });
+  const res = db().prepare("insert into jobs (kind, params, budget_usd, label, log, created_at) values (:kind, :params, :budget, :label, :log, :at)")
+    .run({ kind: job.kind, params: JSON.stringify(job.params), budget: budgetUsd, label: (job.kind === 'discover' && job.label) || null, log: `${nowIso().slice(11, 19)} queued (budget $${budgetUsd.toFixed(2)}, estimate $${est.usd.toFixed(2)})\n`, at: nowIso() });
   deps?.kick?.();
   return getJob(Number(res.lastInsertRowid))!;
 }

@@ -72,14 +72,14 @@ try {
 
   // 4. signed in: the leads page, filters, drawer
   x = await get('/', { headers: authed });
-  assert.equal(x.r.status, 200); assert.match(x.text, /pages\./);
-  const total = Number(x.text.match(/<b>(\d[\d,]*)<\/b> pages\./)?.[1]?.replace(/,/g, ''));
+  assert.equal(x.r.status, 200); assert.match(x.text, /<span>pages<\/span>/);
+  const total = Number(x.text.match(/<b>(\d[\d,]*)<\/b><span>pages<\/span>/)?.[1]?.replace(/,/g, ''));
   assert.ok(total >= 1, 'summary shows the page count');
   x = await get('/?min-followers=notanumber', { headers: authed });
   assert.equal(x.r.status, 200); assert.match(x.text, /Invalid filter/); // a clear message, not a 500
   x = await get(`/?q=${encodeURIComponent("'; drop table pages; --")}`, { headers: authed });
   assert.equal(x.r.status, 200); assert.doesNotMatch(x.text, /Invalid filter/); assert.match(x.text, /No pages match these filters/); // text, not SQL
-  assert.equal(Number((await get('/', { headers: authed })).text.match(/<b>(\d[\d,]*)<\/b> pages\./)[1].replace(/,/g, '')), total, 'table survived the injection attempt');
+  assert.equal(Number((await get('/', { headers: authed })).text.match(/<b>(\d[\d,]*)<\/b><span>pages<\/span>/)[1].replace(/,/g, '')), total, 'table survived the injection attempt');
   const id = x.text.match(/data-open-id="(\d+)"/)?.[1] ?? (await get('/', { headers: authed })).text.match(/data-open-id="(\d+)"/)?.[1];
   assert.ok(id, 'rows link to a page id');
   x = await get(`/?open=${id}`, { headers: authed });
@@ -104,6 +104,8 @@ try {
     assert.equal((await get(path, init)).r.status, 401, `${path} must be 401 without a session`);
   }
   assert.equal((await get("/jobs")).r.status, 307);
+  assert.equal((await get("/searches")).r.status, 307);
+  assert.equal((await get("/api/jobs/1", { method: "PATCH", headers: { "content-type": "application/json", origin: ORIGIN }, body: '{"label":"x"}' })).r.status, 401, "renaming a search needs a session");
   const discoverBody = { kind: "discover", params: { terms: ["ملابس حريمي", "عطور"], locations: ["Cairo, Egypt"], perSearch: 20 } };
   x = await post("/api/jobs/estimate", discoverBody, authed);
   assert.equal(x.r.status, 200); assert.ok(Math.abs(JSON.parse(x.text).usd - 2 * (20 * 0.012 + 0.001)) < 1e-9, "estimate = searches x (results x $0.012 + $0.001)");
@@ -116,7 +118,11 @@ try {
   assert.equal((await post("/api/jobs/999999/cancel", {}, authed)).r.status, 404);
   assert.equal((await get("/jobs/999999", { headers: authed })).r.status, 404);
   x = await get("/jobs", { headers: authed });
-  assert.equal(x.r.status, 200); assert.match(x.text, /Find new pages/); assert.match(x.text, /daily limit/);
+  assert.equal(x.r.status, 200); assert.match(x.text, /what each run applied to/); assert.match(x.text, /daily limit/);
+  x = await get("/searches", { headers: authed });
+  assert.equal(x.r.status, 200); assert.match(x.text, /New search/);
+  assert.equal((await get("/api/jobs/999999", { method: "PATCH", headers: { ...authed, "content-type": "application/json", origin: ORIGIN }, body: '{"label":"x"}' })).r.status, 404);
+  assert.equal((await get("/api/jobs/999999", { method: "PATCH", headers: { ...authed, "content-type": "application/json", origin: "https://evil.example" }, body: '{"label":"x"}' })).r.status, 403, "cross-site rename refused");
 
   // live and free: a website check through the real worker + SSRF-guarded fetch. Cairo Sales answers bots with a Cloudflare 403,
   // which must still count as "has a website".
@@ -166,7 +172,7 @@ try {
   j = await waitJob(JSON.parse(x.text).id);
   assert.equal(j.status, 'failed'); assert.match(j.error, /Three batches in a row failed/); assert.equal(j.spent_usd, 0);
   assert.ok(!/Cannot find module|is not a function|is not defined|Module not found/i.test(j.log), 'no bundling error:\n' + j.log);
-  assert.match((await get('/', { headers: authed })).text, /<b>0<\/b> have posts and ads data/);
+  assert.match((await get('/', { headers: authed })).text, /<b>0<\/b><span>with posts and ads<\/span>/);
   assert.match((await get('/?signal=inbox&enriched=yes', { headers: authed })).text, /No pages match/);
   assert.equal((await get('/?signal=bogus', { headers: authed })).text.includes('Signal is not one of the available options'), true);
   console.log('  enrichment with a bogus token: failed cleanly, $0 spent, nothing saved');

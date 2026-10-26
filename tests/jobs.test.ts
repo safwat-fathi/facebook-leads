@@ -4,10 +4,10 @@ import { resetEnvForTests } from '@/lib/env';
 import { HttpError } from '@/lib/errors';
 import { recordToRow } from '@/lib/ingest';
 import { parseFilters } from '@/lib/filters';
-import { activeJobCount, discoveryRuns, budgetStatus, cancelJob, createJob, estimate, getJob, listJobs, processNext, recoverInterrupted, type JobDeps } from '@/lib/jobs';
+import { activeJobCount, discoveryRuns, budgetStatus, cancelJob, createJob, estimate, getJob, labels, listJobs, processNext, recoverInterrupted, setLabel, type JobDeps } from '@/lib/jobs';
 import type { ApifyPort, RunResult } from '@/lib/apify';
 import type { ChatMsg, LlmPort, ToolCall } from '@/lib/llm';
-import { pageDetail, queryPages, stats, upsertPage } from '@/lib/pages';
+import { pageDetail, queryPages, saveWebsite, stats, upsertPage } from '@/lib/pages';
 import type { PageRef, SiteCheck } from '@/lib/parse';
 import { RECORDS } from './fixtures/records';
 
@@ -87,14 +87,88 @@ describe('estimates', () => {
 });
 
 describe('discoveryRuns', () => {
-  it('lists started Find-pages jobs newest first with how many pages each found, counting pages it already knew', () => {
-    const a = createJob(discover({}, 1)) as { id: number }, b = createJob(discover({}, 1)) as { id: number }, c = createJob(websiteCheck()) as { id: number };
-    getDb().prepare("update jobs set status = 'done' where id in (?, ?, ?)").run(a.id, c.id, c.id);
-    getDb().prepare("update pages set discovered_by = discovered_by || ',job:' || ? where fb_page_id in (select fb_page_id from pages limit 2)").run(String(a.id));
+  const discoverJob = (label?: string) => createJob({ ...discover({}, 1), ...(label !== undefined ? { label } : {}) }) as { id: number; label: string | null };
+  const setTags = (ids: string[], tags: string) => { for (const id of ids) getDb().prepare('update pages set discovered_by = ? where fb_page_id = ?').run(tags, id); };
+  const enrich = (id: string, cost: number) => saveSignals(id, { posts: null, ads: null, adsChecked: true, cost });
+
+  it('lists Find-pages jobs of every status, newest first, and ignores other kinds', () => {
+    const a = discoverJob(), b = discoverJob(), c = createJob(websiteCheck()) as { id: number };
+    getDb().prepare("update jobs set status = 'done', spent_usd = 0.52 where id = ?").run(a.id);
     const runs = discoveryRuns();
-    expect(runs.map((r) => r.id)).toEqual([a.id]); // b is still queued, c is not a search
-    expect(runs[0].found).toBe(2);
-    void b;
+    expect(runs.map((r) => [r.id, r.status])).toEqual([[b.id, 'queued'], [a.id, 'done']]); // c is not a search
+    expect(runs[1]).toMatchObject({ spent_usd: 0.52, found: 0, followUpUsd: 0 });
+    expect(runs[1].estimateUsd).toBeCloseTo(20 * 0.012 + 0.001, 6);
+    void c;
+  });
+
+  it('counts what each search found, enriched and checked, and costs follow-up work on the pages it found first', () => {
+    const a = discoverJob('Cosmetics'), b = discoverJob();
+    const [p0, p1, p2, p3, p4] = ['100', '101', '102', '103', '104'];
+    setTags([p0, p1], `job:${a.id}`);
+    setTags([p2], `job:${a.id},job:${b.id}`); // B found it again
+    setTags([p3], `job:${b.id}`);
+    setTags([p4], `seed,job:${b.id}`); // the old command-line tool found it first
+    enrich(p0, 0.05); saveWebsite(p0, { status: 'none_found', cost: 0.025 });
+    saveWebsite(p1, { status: 'listed_verified', cost: null });
+    enrich(p2, 0.04);
+    saveWebsite(p3, { status: 'none_found', cost: 0.025 });
+    enrich(p4, 0.5);
+    const [rb, ra] = discoveryRuns();
+    expect(ra).toMatchObject({ id: a.id, label: 'Cosmetics', found: 3, fresh: 3, enriched: 2, checked: 2, noSite: 1 });
+    expect(ra.followUpUsd).toBeCloseTo(0.05 + 0.025 + 0.04, 6);
+    expect(rb).toMatchObject({ id: b.id, label: null, found: 3, fresh: 1, enriched: 2, checked: 1, noSite: 1 }); // p2, p3, p4
+    expect(rb.followUpUsd).toBeCloseTo(0.025, 6); // p2 is costed to A, p4 to nobody
+  });
+
+  it('a label is optional, trimmed, at most 60 characters, and can be changed or cleared', () => {
+    expect(discoverJob().label).toBeNull();
+    expect(discoverJob('   ').label).toBeNull();
+    const a = discoverJob('  Cosmetics  ');
+    expect(a.label).toBe('Cosmetics');
+    rej(() => createJob({ ...discover({}, 1), label: 'x'.repeat(61) }), /label must be at most 60/);
+    expect(setLabel(a.id, { label: ' Shoes Q4 ' }).label).toBe('Shoes Q4');
+    expect(setLabel(a.id, { label: '' }).label).toBeNull();
+    rej(() => setLabel(a.id, { label: 'x'.repeat(61) }), /at most 60/);
+    rej(() => setLabel(a.id, { label: 'ok', extra: 1 }), /label|Unrecognized|extra/i);
+    const check = createJob(websiteCheck()) as { id: number };
+    expect(() => setLabel(check.id, { label: 'x' })).toThrowError(/no such search/); // only searches have labels
+    expect(() => setLabel(999, { label: 'x' })).toThrowError(/no such search/);
+  });
+
+  it('lists labels once however they are spelled, with how many searches carry each', () => {
+    discoverJob('Cosmetics'); discoverJob(' cosmetics'); discoverJob('Shoes'); discoverJob();
+    expect(labels()).toEqual([{ label: 'Cosmetics', searches: 2 }, { label: 'Shoes', searches: 1 }]);
+  });
+
+  it('the label filter returns pages from every search with that label, whatever the case', () => {
+    const a = discoverJob('Cosmetics'), b = discoverJob('cosmetics'), c = discoverJob('Shoes');
+    setTags(['100', '101'], `job:${a.id}`); setTags(['102'], `seed,job:${b.id}`); setTags(['103'], `job:${c.id}`);
+    const find = (label: string) => queryPages(parseFilters({ label })).rows.map((r) => r.fb_page_id).sort();
+    expect(find('COSMETICS')).toEqual(['100', '101', '102']);
+    expect(find('Shoes')).toEqual(['103']);
+    expect(find('nothing')).toEqual([]);
+    expect(queryPages(parseFilters({ label: 'cosmetics', 'min-followers': '165341' })).total).toBeGreaterThan(0); // combines with other filters
+    expect(() => parseFilters({ label: 'x'.repeat(61) })).toThrowError(/Label is too long/);
+  });
+});
+
+describe('what a Check or Enrich job applied to', () => {
+  it('points at the search or label it was scoped to, and at nothing when it only has filters', () => {
+    const a = createJob({ ...discover({}, 1), label: 'Cosmetics' }) as { id: number };
+    const b = createJob(discover({ terms: ['عطور', 'ملابس', 'احذية'], locations: ['Cairo, Egypt', 'Giza, Egypt'] }, 1)) as { id: number };
+    getDb().prepare('update pages set discovered_by = ? where fb_page_id in (?, ?)').run(`job:${a.id}`, '100', '101');
+    getDb().prepare('update pages set discovered_by = ? where fb_page_id in (?, ?)').run(`job:${b.id}`, '102', '103');
+    const byLabel = createJob(websiteCheck({ filters: { label: 'cosmetics' } })), bySearch = createJob(websiteCheck({ filters: { job: a.id } })), byUnlabelled = createJob(websiteCheck({ filters: { job: b.id } }));
+    const loose = createJob(websiteCheck({ filters: { country: 'Egypt' } }));
+    expect(bySearch.target).toEqual({ kind: 'search', id: a.id, name: 'Cosmetics' });
+    expect(byUnlabelled.target).toEqual({ kind: 'search', id: b.id, name: '\u200e\u2068عطور, ملابس\u2069 +1 · Cairo, Giza' }); // no label: terms and cities (terms in a bidi isolate)
+    expect(byLabel.target).toEqual({ kind: 'label', name: 'cosmetics' });
+    expect(loose.target).toBeNull();
+    expect(getJob(a.id)!.target).toBeNull(); // a search is not pointed at anything
+    const listed = Object.fromEntries(listJobs().map((j) => [j.id, j.target?.kind ?? null]));
+    expect(listed).toMatchObject({ [bySearch.id]: 'search', [byLabel.id]: 'label', [loose.id]: null, [a.id]: null });
+    setLabel(a.id, { label: 'Renamed' });
+    expect(getJob(bySearch.id)!.target?.name).toBe('Renamed'); // follows the rename
   });
 });
 
