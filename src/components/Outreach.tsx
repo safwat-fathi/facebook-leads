@@ -56,7 +56,7 @@ export function Outreach({ d, state }: { d: PageDetail; state: OutreachState }) 
           <textarea id="o-body" dir="auto" maxLength={5000} rows={8} value={body} onChange={(e) => setBody(e.target.value)} onBlur={keep} />
           <p className="note">Emails get an opt-out line added at the end.</p>
           <div className="review-row">
-            {canEmail && <button type="button" disabled={!!busy || state.dnc || !subject.trim() || !body.trim()} onClick={send}>{busy === 'send' ? 'Sending…' : `Send email to ${d.email}`}</button>}
+            {canEmail && <button type="button" className="primary" disabled={!!busy || state.dnc || !subject.trim() || !body.trim()} onClick={send}>{busy === 'send' ? 'Sending…' : `Send email to ${d.email}`}</button>}
             {canWa && <button type="button" className="quiet" disabled={!!busy || state.dnc || !body.trim()} onClick={whatsapp}>Open in WhatsApp</button>}
           </div>
           {waUrl && <p className="note"><a href={waUrl} target="_blank" rel="noopener noreferrer">Open WhatsApp again</a></p>}

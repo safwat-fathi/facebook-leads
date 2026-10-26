@@ -18,6 +18,7 @@ export const FilterSchema = z.object({
   stage: z.enum(STAGES).optional(),
   verdict: z.enum(['seller_yes', 'seller_no', 'none']).optional(),
   job: z.coerce.number().int().positive().optional(),
+  label: text(60), // every Find-pages search that carries this label (case-insensitive)
   enriched: z.enum(['yes', 'no']).optional(),
   signal: z.enum(['inbox', 'cod', 'active', 'ads', 'message_ads', 'shop_link']).optional(),
   pitch: z.enum(PITCH_FILTERS).optional(), // resolved in pages.ts (the score is not SQL), so buildWhere ignores it
@@ -27,10 +28,10 @@ export type Filters = z.infer<typeof FilterSchema>;
 
 // URL/query names -> schema names. Empty strings mean "any" (a cleared <select>), so they are dropped.
 const KEYS: Record<string, keyof Filters> = {
-  q: 'q', country: 'country', city: 'city', type: 'type', category: 'category', website: 'website', platform: 'platform', whatsapp: 'whatsapp', stage: 'stage', verdict: 'verdict', job: 'job', enriched: 'enriched', signal: 'signal', pitch: 'pitch',
+  q: 'q', country: 'country', city: 'city', type: 'type', category: 'category', website: 'website', platform: 'platform', whatsapp: 'whatsapp', stage: 'stage', verdict: 'verdict', job: 'job', label: 'label', enriched: 'enriched', signal: 'signal', pitch: 'pitch',
   'min-followers': 'minFollowers', 'max-followers': 'maxFollowers',
 };
-const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', platform: 'Store platform', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Search', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
+const LABEL: Record<string, string> = { minFollowers: 'Followers from', maxFollowers: 'Followers up to', q: 'Page name', country: 'Country', city: 'City', type: 'Business type', category: 'Category', website: 'Website', platform: 'Store platform', whatsapp: 'WhatsApp', stage: 'Stage', verdict: 'Seller check', job: 'Search', label: 'Label', enriched: 'Enriched', signal: 'Signal', pitch: 'Pitch' };
 const NUMERIC = new Set(['minFollowers', 'maxFollowers', 'job']);
 function say(i: z.core.$ZodIssue): string {
   const key = String(i.path[0]);
@@ -74,6 +75,8 @@ export function buildWhere(f: Filters): { where: string; params: Record<string, 
   if (f.verdict === 'none') w.push('verdict is null');
   else if (f.verdict) { w.push('verdict = :verdict'); p.verdict = f.verdict; }
   if (f.job) { w.push("instr(',' || discovered_by || ',', ',job:' || :job || ',') > 0"); p.job = String(f.job); } // a string: node:sqlite binds JS numbers as floats, so 12 would concatenate as "12.0"
+  // A label can be shared by several searches: the page matches when any of them found it. j.id is an integer column, so it concatenates without the float problem above.
+  if (f.label) { w.push("exists (select 1 from jobs j where j.kind = 'discover' and lower(j.label) = lower(:label) and instr(',' || pages.discovered_by || ',', ',job:' || j.id || ',') > 0)"); p.label = f.label; }
   if (f.enriched === 'yes') w.push('enriched_at is not null'); else if (f.enriched === 'no') w.push('enriched_at is null');
   const SIGNAL: Record<string, string> = { inbox: 'inbox_posts >= 1', cod: 'cod_posts >= 1', active: 'posts_30d >= 4', ads: 'ads_active >= 1', message_ads: 'ads_message_cta = 1', shop_link: 'shop_link_posts >= 1' };
   if (f.signal) w.push(SIGNAL[f.signal]); // fixed strings, chosen by a validated enum

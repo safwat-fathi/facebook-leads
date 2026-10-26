@@ -206,7 +206,20 @@ describe('database file', () => {
     expect(db.prepare("select count(*) n from spend where job_id = 7").get()).toMatchObject({ n: 1 });
     expect(db.prepare("pragma foreign_key_check").all()).toEqual([]);
     expect(db.prepare("pragma foreign_keys").get()).toMatchObject({ foreign_keys: 1 });
+    expect(db.prepare("select label from jobs where id = 7").get()).toMatchObject({ label: null }); // the rebuild path gets the label column too
     db.close();
     expect(() => openDb(path).close()).not.toThrow(); // idempotent
+  });
+  it('adds the label column to a jobs table that already exists (the server database), keeping its rows', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'fbl-')), 'old.db');
+    const old = new DatabaseSync(path);
+    old.exec("create table jobs (id integer primary key autoincrement, kind text not null, params text not null, status text not null default 'queued' check (status in ('queued', 'running', 'done', 'failed', 'cancelled')), budget_usd real not null, spent_usd real not null default 0, progress text, log text not null default '', error text, apify_runs text not null default '[]', cancel_requested integer not null default 0, created_at text not null, started_at text, finished_at text);");
+    old.exec("insert into jobs (id, kind, params, status, budget_usd, spent_usd, created_at) values (3, 'discover', '{}', 'done', 1, 0.25, 'x')");
+    old.close();
+    const db = openDb(path);
+    expect(db.prepare("select id, spent_usd, label from jobs").get()).toMatchObject({ id: 3, spent_usd: 0.25, label: null });
+    db.prepare("update jobs set label = 'Cosmetics' where id = 3").run();
+    db.close();
+    expect(() => openDb(path).close()).not.toThrow(); // second open does not try to add it again
   });
 });

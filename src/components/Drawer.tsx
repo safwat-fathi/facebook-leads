@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
+import { searchHref } from '@/lib/job-present';
 import { BASIS, CHANNEL_LABEL, CONTACT_CHANNELS, PITCH_LABEL, PLATFORM_LABEL, STAGE_LABEL, pitchTone, safeUrl, usd, webInfo } from '@/lib/present';
 import { THRESHOLD, type Reason } from '@/lib/score';
 import type { PageDetail } from '@/lib/pages';
@@ -32,7 +34,7 @@ function Reasons({ title, score, reasons }: { title: string; score: number; reas
 }
 
 // A native <dialog> opened with showModal(): focus is trapped, the page behind is inert, and Esc closes it, with no hand-written code.
-export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: string; outreach: OutreachState }) {
+export function Drawer({ d, closeHref, outreach, foundBy }: { d: PageDetail; closeHref: string; outreach: OutreachState; foundBy: { id: number; name: string }[] }) {
   const ref = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [saved, setSaved] = useState('');
@@ -85,6 +87,7 @@ export function Drawer({ d, closeHref, outreach }: { d: PageDetail; closeHref: s
           <Fact label="Email">{d.email}</Fact>
           <Fact label="WhatsApp">{d.whatsapp && <><span className="ltr">{d.whatsapp}</span><span className="note">{d.whatsapp_source === 'page' ? ' linked to WhatsApp on the page' : ' the page’s mobile number; not confirmed to be on WhatsApp'}</span></>}</Fact>
           <Fact label="Running ads">{d.ad_status}</Fact>
+          <Fact label="Found by">{foundBy.length > 0 && foundBy.map((f, i) => <span key={f.id}>{i > 0 && ', '}<NextLink href={searchHref(f.id)} dir="auto">{f.name}</NextLink></span>)}</Fact>
         </dl>
         <h3>Website</h3>
         <p><span className={`state ${web.group}`}>{web.text}</span><br /><span className="note">{web.why}</span></p>
